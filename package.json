@@ -1,0 +1,26 @@
+{
+  "name": "puntoplebesserver",
+  "version": "1.0.0",
+  "description": "Backend for punto plebes",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DiegoB0/PuntoPlebesServer.git"
+  },
+  "keywords": [
+    "POS"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DiegoB0/PuntoPlebesServer/issues"
+  },
+  "homepage": "https://github.com/DiegoB0/PuntoPlebesServer#readme",
+  "dependencies": {
+    "typescript": "^5.6.3"
+  }
+}
