@@ -5,4 +5,4 @@
 /public/uploads
 /src/assets/*
 .DS_Store
-.bun.lockb
+bun.lockb
