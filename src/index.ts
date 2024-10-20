@@ -47,3 +47,5 @@ const server = http.createServer(app)
 server.listen(PORT, () => {
   console.log(`Servidor escuchando en el puerto ${PORT}`)
 })
+
+console.log('Iniciando servidor')
