@@ -1,10 +1,9 @@
 import 'dotenv/config'
 import supabase from './config/supabase'
-
 import cors from 'cors'
-import http from 'http'
 import express from 'express'
 import morgan from 'morgan'
+import { router } from "./routes";
 
 // Verificar la conexión con Supabase
 const testConnection = async () => {
@@ -34,18 +33,10 @@ app.use(cors())
 app.use(express.json())
 app.use(morgan('dev'))
 
-// Ruta básica
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
+//Routes
+app.use(router);
 
 // Configuración del puerto
 const PORT = process.env.PORT || 5000 // Usar puerto de la variable de entorno o 3000 por defecto
 
-// Levantar el servidor
-const server = http.createServer(app)
-server.listen(PORT, () => {
-  console.log(`Servidor escuchando en el puerto ${PORT}`)
-})
-
-console.log('Iniciando servidor')
+app.listen(PORT, () => console.log(`Listo por el puerto ${PORT}`));
