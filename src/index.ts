@@ -23,7 +23,6 @@ const testConnection = async () => {
     console.log('Error general de conexión', error)
   }
 }
-testConnection()
 
 // Inicializar la aplicación de Express
 const app = express()
@@ -33,10 +32,13 @@ app.use(cors())
 app.use(express.json())
 app.use(morgan('dev'))
 
-//Routes
+// Routes
 app.use(router)
 
 // Configuración del puerto
-const PORT = process.env.PORT || 5000 // Usar puerto de la variable de entorno o 3000 por defecto
+const PORT = process.env.PORT || 5000
 
 app.listen(PORT, () => console.log(`Listo por el puerto ${PORT}`))
+
+// Run connection test and table initialization on app startup
+testConnection()
