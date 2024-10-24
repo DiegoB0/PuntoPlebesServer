@@ -3,7 +3,7 @@ import supabase from './config/supabase'
 import cors from 'cors'
 import express from 'express'
 import morgan from 'morgan'
-import { router } from "./routes";
+import { router } from './routes'
 
 // Verificar la conexión con Supabase
 const testConnection = async () => {
@@ -34,9 +34,9 @@ app.use(express.json())
 app.use(morgan('dev'))
 
 //Routes
-app.use(router);
+app.use(router)
 
 // Configuración del puerto
 const PORT = process.env.PORT || 5000 // Usar puerto de la variable de entorno o 3000 por defecto
 
-app.listen(PORT, () => console.log(`Listo por el puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Listo por el puerto ${PORT}`))
