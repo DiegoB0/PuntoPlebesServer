@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import supabase from './database/config'
+import supabase from './config/supabase'
 
 import cors from 'cors'
 import http from 'http'
