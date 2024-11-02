@@ -36,12 +36,11 @@ router.get('/:id', checkJwt, getItem)
 
 /**
  * Route to add a new user
- * Method: [PUT]
- * Endpoint: http://localhost:5000/user/:id
- * @route PUT /user/:id
- * @param {string} id - The ID of the user to add
- * @body {Object} user - The user data to add
+ * Method: [POST]
+ * Endpoint: http://localhost:5000/user
+ * @route POST /user
  * @description Add a new user to the database
+ * @body {Object} user - The user data to add
  * @returns {Object} 201 - The newly added user
  * @returns {Error} 400 - Invalid request data
  * @returns {Error} 500 - Internal server error
@@ -50,11 +49,12 @@ router.post('/', checkJwt, addItems)
 
 /**
  * Route to update users
- * Method: [POST]
- * Endpoint: http://localhost:5000/user
- * @route POST /user
- * @description Update existing users
- * @body {Array<Object>} users - An array of users to update
+ * Method: [PUT]
+ * Endpoint: http://localhost:5000/user/:id
+ * @route PUT /user/:id
+ * @description Update existing user
+ * @param {string} id - The ID of the user to update
+ * @body {Object} user - The user data to update
  * @returns {Object} 200 - A confirmation of the update
  * @returns {Error} 400 - Invalid request data
  * @returns {Error} 500 - Internal server error
@@ -62,7 +62,7 @@ router.post('/', checkJwt, addItems)
 router.put('/:id', checkJwt, changeItems)
 
 /**
- * Route to delete an user by ID
+ * Route to delete specific users by ID
  * Method: [DELETE]
  * Endpoint: http://localhost:5000/user/:id
  * @route DELETE /user/:id

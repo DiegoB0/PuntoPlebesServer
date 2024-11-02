@@ -7,7 +7,10 @@ import {
   insertUser,
   updateUser
 } from '../services/user'
-import { validateCreateUser, validateUpdateUser } from '../utils/users_validator_handler'
+import {
+  validateCreateUser,
+  validateUpdateUser
+} from '../utils/users_validator_handler'
 import { User } from '../interfaces/user.interface'
 
 const getItem = async (req: Request, res: Response) => {
@@ -28,50 +31,49 @@ const getItem = async (req: Request, res: Response) => {
 
 const getItems = async (req: Request, res: Response) => {
   try {
-    const items = await getUsers();
-    res.status(200).json(items);
+    const items = await getUsers()
+    res.status(200).json(items)
   } catch (error) {
     if (error instanceof Error) {
       switch (error.message) {
         case 'FAILED_TO_FETCH_USERS':
-          return handleHttp(res, 'FAILED_TO_FETCH_USERS', 500);
+          return handleHttp(res, 'FAILED_TO_FETCH_USERS', 500)
         case 'UNKNOWN_ERROR':
-          return handleHttp(res, 'UNKNOWN_ERROR', 500);
+          return handleHttp(res, 'UNKNOWN_ERROR', 500)
         default:
-          return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500);
+          return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
       }
     } else {
-      return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500);
+      return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
     }
   }
-};
+}
 
 const addItems = async (req: Request, res: Response) => {
   try {
-    const body: User = req.body;
+    const body: User = req.body
 
     // Validate the user data
-    const { error } = validateCreateUser(body);
+    const { error } = validateCreateUser(body)
     if (error) {
-      return handleHttp(res, error.details[0].message, 400);
+      return handleHttp(res, error.details[0].message, 400)
     }
 
-    const responseItem = await insertUser(body);
-    res.status(201).json(responseItem);
+    const responseItem = await insertUser(body)
+    res.status(201).json(responseItem)
   } catch (e: any) {
-
     switch (e.message) {
       case 'FAILED_EMAIL_CHECK':
-        return handleHttp(res, 'Failed to check the email.', 500);
+        return handleHttp(res, 'Failed to check the email.', 500)
       case 'EMAIL_ALREADY_EXISTS':
-        return handleHttp(res, 'Email already exists.', 400);
+        return handleHttp(res, 'Email already exists.', 400)
       case 'FAILED_TO_INSERT_USER':
-        return handleHttp(res, 'Failed to insert user.', 500);
+        return handleHttp(res, 'Failed to insert user.', 500)
       default:
-        return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500);
+        return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
     }
   }
-};
+}
 
 const changeItems = async (req: Request, res: Response) => {
   try {
@@ -97,29 +99,29 @@ const changeItems = async (req: Request, res: Response) => {
 
 const removeItems = async (req: Request, res: Response) => {
   try {
-    const itemId = req.params.id;
+    const itemId = req.params.id
 
-    const { success, message, error } = await deleteUser(itemId);
+    const { success, message, error } = await deleteUser(itemId)
 
     // Display errors depending on the service response
     if (!success) {
       switch (error) {
         case 'ITEM_NOT_FOUND':
-          return handleHttp(res, 'Item not found.', 404);
+          return handleHttp(res, 'Item not found.', 404)
         case 'DELETE_ERROR':
-          return handleHttp(res, 'Failed to delete item.', 500);
+          return handleHttp(res, 'Failed to delete item.', 500)
         case 'FETCH_ERROR':
-          return handleHttp(res, 'Failed to check item existence.', 500);
+          return handleHttp(res, 'Failed to check item existence.', 500)
         default:
-          return handleHttp(res, 'Internal server error.', 500);
+          return handleHttp(res, 'Internal server error.', 500)
       }
     }
 
-    res.status(200).json(message);
+    res.status(200).json(message)
   } catch (e) {
-    console.error('Unexpected error in removeItems:', e);
-    handleHttp(res, 'INTERNAL_SERVER_ERROR', 500);
+    console.error('Unexpected error in removeItems:', e)
+    handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
   }
-};
+}
 
 export { getItem, getItems, addItems, changeItems, removeItems }

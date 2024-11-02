@@ -26,7 +26,9 @@ const registerUser = async ({ email, password, name }: User) => {
     //Assign user role by default
     const role = 'user'
     const passHash = await encrypt(password)
-    const { data, error } = await supabase.from('users').insert({ email, password: passHash, name, role })
+    const { data, error } = await supabase
+      .from('users')
+      .insert({ email, password: passHash, name, role })
     console.log(data)
 
     if (error) {
@@ -34,7 +36,7 @@ const registerUser = async ({ email, password, name }: User) => {
       return { error: 'Error inserting user' }
     }
 
-    return { message: 'User registered successfully' };
+    return { message: 'User registered successfully' }
   } catch (err) {
     console.error('Unexpected error inserting user:', err)
     return null
@@ -54,21 +56,21 @@ const loginUser = async ({ email, password }: Auth) => {
       return { error: 'Invalid email' }
     }
 
-    if (!existingUser) return "USER_NOT_FOUND"
+    if (!existingUser) return 'USER_NOT_FOUND'
 
-    const parsedUser = JSON.parse(JSON.stringify(existingUser));
-    const passwordHash = parsedUser.password;
+    const parsedUser = JSON.parse(JSON.stringify(existingUser))
+    const passwordHash = parsedUser.password
 
     //Check if the passwords match
     const isCorrect = await verified(password, passwordHash)
-    if (!isCorrect) return "PASSWORD_INCORRECT"
+    if (!isCorrect) return 'PASSWORD_INCORRECT'
 
     //Generate jsonwebtoken
     const token = await generateToken(parsedUser.email)
 
     const data = {
       token,
-      message: "User signed in successfully"
+      message: 'User signed in successfully'
     }
 
     return data

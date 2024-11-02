@@ -19,7 +19,7 @@ const UpdateUserSchema = Joi.object<User>({
   name: Joi.string().optional(),
   email: Joi.string().email().optional(),
   password: Joi.string().min(6).optional(),
-  role: Joi.string().optional(),
+  role: Joi.string().optional()
 })
 
 // Validation function
