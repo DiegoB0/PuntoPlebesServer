@@ -1,70 +1,66 @@
 import { User } from '../interfaces/user.interface'
 import supabase from '../config/supabase'
+import { encrypt } from '../utils/bcrypt_handler';
 
-/**
- * Insert a new user into the database
- * @param {User} user - User object containing name, email, password, and role
- * @returns {Promise<Object | null>} - Inserted user data or null in case of error
- */
-const insertUser = async (user: User) => {
+const insertUser = async ({ email, password, name, role }: User) => {
   try {
     // Check if the email already exists
     const { data: existingUser, error: emailCheckError } = await supabase
       .from('users')
       .select('*')
-      .eq('email', user.email)
-      .single() // Use single to return only one record
+      .eq('email', email)
+      .maybeSingle()
 
     if (emailCheckError) {
-      console.error('Error checking email:', emailCheckError.message)
-      return null // Handle errors accordingly
+      throw new Error('FAILED_EMAIL_CHECK')
     }
 
     if (existingUser) {
-      console.error('User already exists with this email:', user.email)
-      return { error: 'User already exists with this email.' }
+      throw new Error('EMAIL_ALREADY_EXISTS')
     }
 
-    // If no existing user, proceed to insert the new user
-    const { data, error } = await supabase.from('users').insert([user])
+    //Encrypt the password
+    const passHash = await encrypt(password)
+
+    // Proceed to insert the new user
+    const { data, error } = await supabase.from('users').insert({ email, password: passHash, name, role }).select('*')
+    console.log(data)
 
     if (error) {
       console.error('Error inserting user:', error.message)
-      return null
+      throw new Error('FAILED_TO_INSERT_USER')
     }
 
-    return data
-  } catch (err) {
-    console.error('Unexpected error inserting user:', err)
-    return null
+    return { message: 'User inserted successfully' };
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
-/**
- * Get all users from the database
- * @returns {Promise<User[] | null>} - List of users or null in case of error
- */
 const getUsers = async () => {
   try {
-    const { data, error } = await supabase.from('users').select('*')
+    const { data, error } = await supabase.from('users').select('*');
 
     if (error) {
-      console.error('Error fetching users:', error.message)
-      return null
+      throw new Error('FAILED_TO_FETCH_USERS');
     }
 
-    return data
-  } catch (err) {
-    console.error('Unexpected error fetching users:', err)
-    return null
-  }
-}
+    if (!data || (Array.isArray(data) && data.length === 0)) {
+      throw new Error('NO_USERS_FOUND');
+    }
 
-/**
- * Get a user by ID
- * @param {string} id - The ID of the user to fetch
- * @returns {Promise<User | null>} - The user object or null in case of error
- */
+    return data;
+  } catch (err) {
+    console.error('Unexpected error fetching users:', err);
+    throw new Error('UNKNOWN_ERROR');
+  }
+};
+
+
 const getUserById = async (id: string) => {
   try {
     const { data, error } = await supabase
@@ -74,7 +70,6 @@ const getUserById = async (id: string) => {
       .single()
 
     if (error) {
-      console.error('Error fetching user:', error.message)
       return null
     }
 
@@ -85,50 +80,59 @@ const getUserById = async (id: string) => {
   }
 }
 
-/**
- * Update a user in the database
- * @param {string} id - The ID of the user to update
- * @param {Partial<User>} user - User object containing the fields to update
- * @returns {Promise<Object | null>} - Updated user data or null in case of error
- */
 const updateUser = async (id: string, user: Partial<User>) => {
   try {
     const { data, error } = await supabase
       .from('users')
       .update(user)
       .eq('id', id)
+      .select()
+
+    console.log(data)
 
     if (error) {
       console.error('Error updating user:', error.message)
       return null
     }
 
-    return data
+    return { message: 'User updated successfully' };
   } catch (err) {
     console.error('Unexpected error updating user:', err)
     return null
   }
 }
 
-/**
- * Delete a user from the database
- * @param {string} id - The ID of the user to delete
- * @returns {Promise<Object | null>} - Deleted user data or null in case of error
- */
 const deleteUser = async (id: string) => {
   try {
-    const { data, error } = await supabase.from('users').delete().eq('id', id)
+    // Check if user exists
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
 
-    if (error) {
-      console.error('Error deleting user:', error.message)
-      return null
+    if (fetchError) {
+      return { success: false, error: 'FETCH_ERROR' };
     }
 
-    return data
+    if (!existingUser) {
+      return { success: false, error: 'ITEM_NOT_FOUND' };
+    }
+
+    const { error: deleteError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      return { success: false, error: 'DELETE_ERROR' };
+    }
+
+    return { success: true, message: 'User deleted successfully' };
   } catch (err) {
-    console.error('Unexpected error deleting user:', err)
-    return null
+    console.error('Unexpected error deleting user:', err);
+    return { success: false, error: 'INTERNAL_ERROR' };
   }
-}
+};
 
 export { insertUser, getUsers, getUserById, updateUser, deleteUser }

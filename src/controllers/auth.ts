@@ -1,12 +1,14 @@
 import { Request, Response } from 'express'
+import { loginUser, registerUser } from '../services/auth'
 
-const registerController = async (req: Request, res: Response) => {
-  const body = req.body
-  console.log(body, res)
+const registerController = async ({ body }: Request, res: Response) => {
+  const responseUser = await registerUser(body)
+  res.status(201).json(responseUser);
 }
 
-const loginController = async (req: Request, res: Response) => {
-  console.log('I will go this later', req, res)
+const loginController = async ({ body }: Request, res: Response) => {
+  const responseLogin = await loginUser(body)
+  res.status(201).json(responseLogin)
 }
 
 export { registerController, loginController }

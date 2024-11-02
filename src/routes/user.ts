@@ -6,6 +6,7 @@ import {
   getItems,
   changeItems
 } from '../controllers/user'
+import { checkJwt } from '../middlewares/sessions'
 
 const router = Router()
 
@@ -18,7 +19,7 @@ const router = Router()
  * @returns {Array<Object>} 200 - An array of users
  * @returns {Error} 500 - Internal server error
  */
-router.get('/', getItems)
+router.get('/', checkJwt, getItems)
 
 /**
  * Route to get a single user by ID
@@ -31,7 +32,7 @@ router.get('/', getItems)
  * @returns {Error} 404 - User not found
  * @returns {Error} 500 - Internal server error
  */
-router.get('/:id', getItem)
+router.get('/:id', checkJwt, getItem)
 
 /**
  * Route to add a new user
@@ -45,7 +46,7 @@ router.get('/:id', getItem)
  * @returns {Error} 400 - Invalid request data
  * @returns {Error} 500 - Internal server error
  */
-router.post('/', changeItems)
+router.post('/', checkJwt, addItems)
 
 /**
  * Route to update users
@@ -58,7 +59,7 @@ router.post('/', changeItems)
  * @returns {Error} 400 - Invalid request data
  * @returns {Error} 500 - Internal server error
  */
-router.put('/:id', addItems)
+router.put('/:id', checkJwt, changeItems)
 
 /**
  * Route to delete an user by ID
@@ -71,6 +72,6 @@ router.put('/:id', addItems)
  * @returns {Error} 404 - User not found
  * @returns {Error} 500 - Internal server error
  */
-router.delete('/:id', removeItems)
+router.delete('/:id', checkJwt, removeItems)
 
 export { router }

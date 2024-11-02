@@ -7,19 +7,9 @@ import {
   insertUser,
   updateUser
 } from '../services/user'
-import { validateUser } from '../utils/users_validator_handle'
+import { validateCreateUser, validateUpdateUser } from '../utils/users_validator_handler'
 import { User } from '../interfaces/user.interface'
 
-/**
- * Get a single item by ID
- * @route GET /user/:id
- * @param {Request} req - Express request object
- * @param {string} req.params.id - ID of the item to fetch
- * @param {Response} res - Express response object
- * @returns {Object} 200 - The item details
- * @returns {Error} 404 - Item not found
- * @returns {Error} 500 - Internal server error
- */
 const getItem = async (req: Request, res: Response) => {
   try {
     const itemId = req.params.id
@@ -36,67 +26,59 @@ const getItem = async (req: Request, res: Response) => {
   }
 }
 
-/**
- * Get all items
- * @route GET /user
- * @param {Request} req - Express request object
- * @param {Response} res - Express response object
- * @returns {Array<Object>} 200 - An array of items
- * @returns {Error} 500 - Internal server error
- */
 const getItems = async (req: Request, res: Response) => {
   try {
-    const items = await getUsers()
-    res.status(200).json(items)
-  } catch (e) {
-    console.error(e)
-    handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
+    const items = await getUsers();
+    res.status(200).json(items);
+  } catch (error) {
+    if (error instanceof Error) {
+      switch (error.message) {
+        case 'FAILED_TO_FETCH_USERS':
+          return handleHttp(res, 'FAILED_TO_FETCH_USERS', 500);
+        case 'UNKNOWN_ERROR':
+          return handleHttp(res, 'UNKNOWN_ERROR', 500);
+        default:
+          return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500);
+      }
+    } else {
+      return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500);
+    }
   }
-}
+};
 
-/**
- * Add a new item
- * @route PUT /user
- * @param {Request} req - Express request object
- * @param {Object} req.body - The new item data
- * @param {Response} res - Express response object
- * @returns {Object} 201 - The newly created item
- * @returns {Error} 400 - Invalid request data
- * @returns {Error} 500 - Internal server error
- */
 const addItems = async (req: Request, res: Response) => {
   try {
-    const body: User = req.body
+    const body: User = req.body;
 
-    const { error } = validateUser(body)
+    // Validate the user data
+    const { error } = validateCreateUser(body);
     if (error) {
-      return handleHttp(res, error.details[0].message, 400)
+      return handleHttp(res, error.details[0].message, 400);
     }
 
-    const responseItem = await insertUser(body)
-    res.status(201).json(responseItem)
-  } catch (e) {
-    console.error(e)
-    handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
-  }
-}
+    const responseItem = await insertUser(body);
+    res.status(201).json(responseItem);
+  } catch (e: any) {
 
-/**
- * Update an existing item
- * @route POST /user/:id
- * @param {Request} req - Express request object
- * @param {Object} req.body - The updated item data
- * @param {Response} res - Express response object
- * @returns {Object} 200 - The updated item
- * @returns {Error} 400 - Invalid request data
- * @returns {Error} 500 - Internal server error
- */
+    switch (e.message) {
+      case 'FAILED_EMAIL_CHECK':
+        return handleHttp(res, 'Failed to check the email.', 500);
+      case 'EMAIL_ALREADY_EXISTS':
+        return handleHttp(res, 'Email already exists.', 400);
+      case 'FAILED_TO_INSERT_USER':
+        return handleHttp(res, 'Failed to insert user.', 500);
+      default:
+        return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500);
+    }
+  }
+};
+
 const changeItems = async (req: Request, res: Response) => {
   try {
     const itemId = req.params.id
     const body: User = req.body
 
-    const { error } = validateUser(body)
+    const { error } = validateUpdateUser(body)
     if (error) {
       return handleHttp(res, error.details[0].message, 400)
     }
@@ -113,30 +95,31 @@ const changeItems = async (req: Request, res: Response) => {
   }
 }
 
-/**
- * Delete an item by ID
- * @route DELETE /user/:id
- * @param {Request} req - Express request object
- * @param {string} req.params.id - ID of the item to delete
- * @param {Response} res - Express response object
- * @returns {Object} 200 - Confirmation of deletion
- * @returns {Error} 404 - Item not found
- * @returns {Error} 500 - Internal server error
- */
 const removeItems = async (req: Request, res: Response) => {
   try {
-    const itemId = req.params.id
-    const deleted = await deleteUser(itemId)
+    const itemId = req.params.id;
 
-    if (!deleted) {
-      return handleHttp(res, 'ITEM_NOT_FOUND', 404)
+    const { success, message, error } = await deleteUser(itemId);
+
+    // Display errors depending on the service response
+    if (!success) {
+      switch (error) {
+        case 'ITEM_NOT_FOUND':
+          return handleHttp(res, 'Item not found.', 404);
+        case 'DELETE_ERROR':
+          return handleHttp(res, 'Failed to delete item.', 500);
+        case 'FETCH_ERROR':
+          return handleHttp(res, 'Failed to check item existence.', 500);
+        default:
+          return handleHttp(res, 'Internal server error.', 500);
+      }
     }
 
-    res.status(200).json({ message: 'Item deleted successfully.' })
+    res.status(200).json(message);
   } catch (e) {
-    console.error(e)
-    handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
+    console.error('Unexpected error in removeItems:', e);
+    handleHttp(res, 'INTERNAL_SERVER_ERROR', 500);
   }
-}
+};
 
 export { getItem, getItems, addItems, changeItems, removeItems }

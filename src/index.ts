@@ -8,19 +8,15 @@ import { router } from './routes'
 // Verificar la conexión con Supabase
 const testConnection = async () => {
   try {
-    const { data, error } = await supabase
-      .from('notes')
-      .select('*')
-      .order('id', { ascending: false })
-      .limit(10)
+    const { data, error } = await supabase.rpc('connectivity_test')
 
     if (error) {
-      console.log('Error trayendo datos', error)
+      console.log('Connection test failed:', error.message)
     } else {
-      console.log('Datos trayendo', data)
+      console.log('Connection successful:', data)
     }
   } catch (error) {
-    console.log('Error general de conexión', error)
+    console.log('General connection error:', error)
   }
 }
 
