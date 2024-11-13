@@ -10,7 +10,7 @@ import {
 import {
   validateCreateUser,
   validateUpdateUser
-} from '../utils/users_validator_handler'
+} from '../utils/user_validator_handler'
 import { User } from '../interfaces/user.interface'
 
 const getItem = async (req: Request, res: Response) => {
