@@ -4,7 +4,8 @@ import { generateToken, verifyRefreshToken } from '../utils/jwt.handler'
 import {
   validateSignUpUser,
   validateSignInUser
-} from '../utils/user_validator_handler'
+} from '../utils/validations/user_validator_handler'
+import { handleHttp } from '../utils/error_handler'
 
 const registerController = async ({ body }: Request, res: Response) => {
   const { error } = validateSignUpUser(body)
@@ -19,12 +20,17 @@ const registerController = async ({ body }: Request, res: Response) => {
   try {
     const responseUser = await registerUser(body)
     res.status(201).json(responseUser)
-  } catch (err) {
-    console.error('Error during registration:', err)
-    res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to register user'
-    })
+  } catch (e: any) {
+    switch (e.message) {
+      case 'USER_ALREADY_EXISTS':
+        return handleHttp(res, 'User already exists with this email', 409)
+      case 'INVALID_EMAIL':
+        return handleHttp(res, 'Invalid email provided', 422)
+      case 'INSERTION_ERROR':
+        return handleHttp(res, 'Error inserting user', 500)
+      default:
+        return handleHttp(res, 'An unexpected error occurred', 500)
+    }
   }
 }
 
@@ -41,11 +47,17 @@ const loginController = async ({ body }: Request, res: Response) => {
   try {
     const responseLogin = await loginUser(body)
     res.status(201).json(responseLogin)
-  } catch (err) {
-    console.error('Error during login:', err)
-    res
-      .status(500)
-      .json({ error: 'INTERNAL_SERVER_ERROR', message: 'Failed to login user' })
+  } catch (e: any) {
+    switch (e.message) {
+      case 'USER_NOT_FOUND':
+        return handleHttp(res, 'No user with this email', 409)
+      case 'INVALID_EMAIL':
+        return handleHttp(res, 'Invalid email provided', 400)
+      case 'INCORRECT_PASSWORD':
+        return handleHttp(res, 'Incorrect password provided', 500)
+      default:
+        return handleHttp(res, 'An unexpected error occurred', 500)
+    }
   }
 }
 
@@ -53,17 +65,12 @@ const refreshTokenController = async (req: Request, res: Response) => {
   const { refreshToken } = req.body
 
   if (!refreshToken) {
-    return res
-      .status(401)
-      .json({ error: 'NO_REFRESH_TOKEN', message: 'Refresh token is missing' })
+    return handleHttp(res, 'Refresh token is missing', 401)
   }
 
   const isValid = verifyRefreshToken(refreshToken)
   if (!isValid) {
-    return res.status(401).json({
-      error: 'INVALID_REFRESH_TOKEN',
-      message: 'Invalid refresh token'
-    })
+    return handleHttp(res, 'Invalid refresh token', 403)
   }
 
   // Extract the user ID from the refresh token payload

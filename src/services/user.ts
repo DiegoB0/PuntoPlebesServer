@@ -72,13 +72,17 @@ const getUserById = async (id: string) => {
       .single()
 
     if (error) {
-      return null
+      throw new Error('FAILED_TO_FETCH_USER')
+    }
+
+    if (!data || (Array.isArray(data) && data.length === 0)) {
+      throw new Error('NO_USER_FOUND')
     }
 
     return data
   } catch (err) {
-    console.error('Unexpected error fetching user:', err)
-    return null
+    console.error('Unexpected error fetching users:', err)
+    throw new Error('UNKNOWN_ERROR')
   }
 }
 
@@ -90,17 +94,18 @@ const updateUser = async (id: string, user: Partial<User>) => {
       .eq('id', id)
       .select()
 
-    console.log(data)
+    if (!data) {
+      throw new Error('USER_NOT_FOUND')
+    }
 
     if (error) {
-      console.error('Error updating user:', error.message)
-      return null
+      throw new Error('UPDATE_ERROR')
     }
 
     return { message: 'User updated successfully' }
   } catch (err) {
     console.error('Unexpected error updating user:', err)
-    return null
+    throw new Error('UNEXPECTED_ERROR')
   }
 }
 

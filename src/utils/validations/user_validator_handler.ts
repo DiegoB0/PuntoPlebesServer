@@ -1,12 +1,12 @@
 import Joi from 'joi'
-import { User } from '../interfaces/user.interface'
-import { Signup } from '../interfaces/signup.interface'
-import { Auth } from '../interfaces/auth.interface'
+import { User } from '../../interfaces/user.interface'
+import { Signup } from '../../interfaces/signup.interface'
+import { Auth } from '../../interfaces/auth.interface'
 
-//Define the joi schema for signing updating
+//Define the joi schema for signing up users
 const CreateSignUpSchema = Joi.object<Signup>({
   name: Joi.string()
-    .pattern(/^[a-zA-Z]+$/)
+    .pattern(/^[a-zA-Z\s]+$/)
     .min(3) // You can adjust the minimum length here
     .max(255) // Optional: Adjust the maximum length
     .required()
@@ -35,6 +35,7 @@ export const validateSignUpUser = (user: Signup) => {
   return CreateSignUpSchema.validate(user)
 }
 
+//Define the joi schema for signing in users
 const CreateSignInSchema = Joi.object<Auth>({
   email: Joi.string().email().required(),
   password: Joi.string().required()
@@ -47,7 +48,7 @@ export const validateSignInUser = (user: Auth) => {
 // Define the Joi schema for creating users
 const CreateUserSchema = Joi.object<User>({
   name: Joi.string()
-    .pattern(/^[a-zA-Z]+$/)
+    .pattern(/^[a-zA-Z\s]+$/)
     .min(3) // You can adjust the minimum length here
     .max(255) // Optional: Adjust the maximum length
     .required()
@@ -81,7 +82,7 @@ export const validateCreateUser = (user: User) => {
 // Define the Joi schema for updating users
 const UpdateUserSchema = Joi.object<User>({
   name: Joi.string()
-    .pattern(/^[a-zA-Z]+$/)
+    .pattern(/^[a-zA-Z\s]+$/)
     .min(3) // Minimum length 3 characters
     .max(255) // Optional: Adjust the maximum length
     .optional()

@@ -1,7 +1,7 @@
 import Joi from 'joi'
-import { Order } from '../interfaces/order.interface'
+import { Order } from '../../interfaces/order.interface'
 
-//Define the joi schema for signing updating
+//Define the joi schema for creating orders
 const CreateOrderSchema = Joi.object<Order>({
   order_number: Joi.string(),
   order_status: Joi.string(),

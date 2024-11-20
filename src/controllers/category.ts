@@ -6,6 +6,7 @@ import {
   updateCategoryService,
   deleteCategoryService
 } from '../services/category'
+import { handleHttp } from '../utils/error_handler'
 
 const createCategoryController = async ({ body }: Request, res: Response) => {
   try {

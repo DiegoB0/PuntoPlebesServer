@@ -14,13 +14,11 @@ const registerUser = async ({ email, password, name }: User) => {
       .maybeSingle()
 
     if (emailCheckError) {
-      console.error('Error checking email:', emailCheckError.message)
-      return { error: 'Invalid email' }
+      throw new Error('INVALID_EMAIL')
     }
 
     if (existingUser) {
-      console.error('User already exists with this email:', email)
-      return { error: 'User already exists with this email.' }
+      throw new Error('USER_ALREADY_EXISTS')
     }
 
     //Assign user role by default
@@ -29,10 +27,10 @@ const registerUser = async ({ email, password, name }: User) => {
     const { data: newUser, error } = await supabase
       .from('users')
       .insert({ email, password: passHash, name, role })
+      .select()
 
-    if (error) {
-      console.error('Error inserting user:', error.message)
-      return { error: 'Error inserting user' }
+    if (error || !newUser) {
+      throw new Error('INSERTION_ERROR')
     }
 
     const parsedUser = JSON.parse(JSON.stringify(newUser))
@@ -48,9 +46,12 @@ const registerUser = async ({ email, password, name }: User) => {
     }
 
     return returnData
-  } catch (err) {
-    console.error('Unexpected error inserting user:', err)
-    return null
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
@@ -62,19 +63,22 @@ const loginUser = async ({ email, password }: Auth) => {
       .eq('email', email)
       .single()
 
-    if (emailCheckError) {
-      console.error('Error checking email:', emailCheckError.message)
-      return { error: 'Invalid email' }
+    if (!existingUser) {
+      throw new Error('USER_NOT_FOUND')
     }
 
-    if (!existingUser) return 'USER_NOT_FOUND'
+    if (emailCheckError) {
+      throw new Error('INVALID_EMAIL')
+    }
 
     const parsedUser = JSON.parse(JSON.stringify(existingUser))
     const passwordHash = parsedUser.password
 
     //Check if the passwords match
     const isCorrect = await verified(password, passwordHash)
-    if (!isCorrect) return 'PASSWORD_INCORRECT'
+    if (!isCorrect) {
+      throw new Error('INCORRECT_PASSWORD')
+    }
 
     //Generate jsonwebtoken
     const token = await generateToken(parsedUser.email)
@@ -87,9 +91,12 @@ const loginUser = async ({ email, password }: Auth) => {
     }
 
     return data
-  } catch (err) {
-    console.error('Unexpected error inserting user:', err)
-    return null
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 

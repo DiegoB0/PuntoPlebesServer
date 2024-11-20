@@ -18,8 +18,7 @@ const insertOrder = async (order: Order) => {
     ])
 
     if (orderError) {
-      console.error('Error inserting order:', orderError.message)
-      throw new Error('Error inserting order')
+      throw new Error('ORDER_INSERT_ERROR')
     }
 
     // Step 2: Retrieve the last inserted order by `order_number`
@@ -32,11 +31,7 @@ const insertOrder = async (order: Order) => {
       .single<OrderResponse>()
 
     if (selectError || !insertedOrder) {
-      console.error(
-        'Error retrieving order ID:',
-        selectError?.message || 'No data returned'
-      )
-      throw new Error('Error retrieving order ID')
+      throw new Error('ORDER_RETRIEVE_ERROR')
     }
 
     const orderId = insertedOrder.id
@@ -44,6 +39,7 @@ const insertOrder = async (order: Order) => {
 
     // Step 3: Calculate the total price based on items
     let totalPrice = 0
+    const subtotals: { meal_id: number; subtotal: number }[] = []
 
     for (const item of order.items) {
       // Get the price of each meal
@@ -54,15 +50,15 @@ const insertOrder = async (order: Order) => {
         .single<Meal>()
 
       if (mealError || !mealData) {
-        console.error(
-          'Error fetching meal price:',
-          mealError?.message || 'No data returned'
-        )
-        throw new Error('Error fetching meal price')
+        throw new Error('MEAL_FETCH_ERROR')
       }
 
       const mealPrice = mealData.price
+      const subtotal = mealPrice * item.quantity
       totalPrice += mealPrice * item.quantity
+
+      //Save subtotal for reporting
+      subtotals.push({ meal_id: item.meal_id, subtotal })
 
       // Insert the order items
       const { data: insertedItem, error: itemError } = await supabase
@@ -78,11 +74,7 @@ const insertOrder = async (order: Order) => {
         .single<OrderResponse>()
 
       if (itemError || !insertedItem) {
-        console.error(
-          'Error inserting order item:',
-          itemError?.message || 'No data returned'
-        )
-        throw new Error('Error inserting order item')
+        throw new Error('ORDER_ITEM_INSERT_ERROR')
       }
 
       const itemId = insertedItem.id
@@ -100,11 +92,7 @@ const insertOrder = async (order: Order) => {
           )
 
         if (detailsError) {
-          console.error(
-            'Error inserting order item details:',
-            detailsError.message
-          )
-          throw new Error('Error inserting order item details')
+          throw new Error('ORDER_ITEM_DETAILS_INSERT_ERROR')
         }
       }
     }
@@ -116,8 +104,7 @@ const insertOrder = async (order: Order) => {
       .eq('id', orderId)
 
     if (updateError) {
-      console.error('Error updating total price:', updateError.message)
-      throw new Error('Error updating total price')
+      throw new Error('ORDER_TOTAL_UPDATE_ERROR')
     }
 
     // Step 6: Insert the payments (if any)
@@ -131,8 +118,7 @@ const insertOrder = async (order: Order) => {
       )
 
       if (paymentsError) {
-        console.error('Error inserting payments:', paymentsError.message)
-        throw new Error('Error inserting payments')
+        throw new Error('PAYMENTS_INSERT_ERROR')
       }
     }
 
@@ -144,14 +130,14 @@ const insertOrder = async (order: Order) => {
     const exchange = totalGiven - totalPrice
 
     if (exchange < 0) {
-      throw new Error(
-        'Insufficient payment: Amount given is less than the total price.'
-      )
+      throw new Error('INSUFFICIENT_PAYMENT_ERROR')
     }
 
     const data = {
       message: 'Order saved successfully',
-      exchange: exchange
+      exchange: exchange,
+      totalPrice,
+      subtotals
     }
 
     return data
@@ -277,11 +263,11 @@ const getOrderById = async (id: string): Promise<Order[]> => {
 
     if (error) {
       console.error('Supabase error:', error)
-      throw new Error('FAILED_TO_FETCH_ORDERS')
+      throw new Error('FAILED_TO_FETCH_ORDER')
     }
 
     if (!data || (Array.isArray(data) && data.length === 0)) {
-      throw new Error('NO_ORDER_FOUND')
+      throw new Error('ORDER_NOT_FOUND')
     }
 
     // Step 2: Fetch 'order_item_details' for each 'order_item' (one-to-many relationship)

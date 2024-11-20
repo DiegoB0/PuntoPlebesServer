@@ -1,9 +1,9 @@
 import 'dotenv/config'
 import supabase from './config/supabase'
 import cors from 'cors'
-import express from 'express'
 import morgan from 'morgan'
 import { router } from './routes'
+import express, { Request, Response, NextFunction } from 'express'
 
 // Verificar la conexión con Supabase
 const testConnection = async () => {
@@ -30,6 +30,18 @@ app.use(morgan('dev'))
 
 // Routes
 app.use(router)
+
+// Global error handler for invalid JSON
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof SyntaxError) {
+    return res.status(400).json({
+      error: 'INVALID_JSON',
+      message:
+        'The JSON provided is malformed. Please check the syntax and try again.'
+    })
+  }
+  next(err)
+})
 
 // Configuración del puerto
 const PORT = process.env.PORT || 5000

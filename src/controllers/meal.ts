@@ -6,6 +6,7 @@ import {
   updateMealService,
   deleteMealService
 } from '../services/meal'
+import { handleHttp } from '../utils/error_handler'
 
 const createMealController = async ({ body }: Request, res: Response) => {
   try {
