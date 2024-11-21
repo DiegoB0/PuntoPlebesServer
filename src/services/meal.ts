@@ -14,9 +14,12 @@ const createMealService = async (mealData: Meal) => {
     }
 
     return data
-  } catch (err) {
-    console.error('Unexpected error:', err)
-    throw new Error('Unexpected error')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
@@ -30,9 +33,12 @@ const getAllMealsService = async () => {
     }
 
     return data
-  } catch (err) {
-    console.error('Unexpected error:', err)
-    throw new Error('Unexpected error')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
@@ -50,9 +56,12 @@ const getMealService = async (id: number) => {
     }
 
     return data
-  } catch (err) {
-    console.error('Unexpected error:', err)
-    throw new Error('Unexpected error')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
@@ -70,14 +79,30 @@ const updateMealService = async (id: number, mealData: Meal) => {
     }
 
     return data
-  } catch (err) {
-    console.error('Unexpected error:', err)
-    throw new Error('Unexpected error')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
 const deleteMealService = async (id: number) => {
   try {
+    const { data: existingMeal, error: fetchError } = await supabase
+      .from('meals')
+      .select('*')
+      .eq('id', id)
+
+    if (fetchError) {
+      throw new Error('FETCH_ERROR')
+    }
+
+    if (!existingMeal || existingMeal.length === 0) {
+      throw new Error('ITEM_NOT_FOUND')
+    }
+
     const { error } = await supabase.from('meals').delete().eq('id', id)
 
     if (error) {
@@ -86,9 +111,12 @@ const deleteMealService = async (id: number) => {
     }
 
     return true
-  } catch (err) {
-    console.error('Unexpected error:', err)
-    throw new Error('Unexpected error')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 

@@ -27,11 +27,13 @@ const insertUser = async ({ email, password, name, role }: User) => {
       .from('users')
       .insert({ email, password: passHash, name, role })
       .select('*')
-    console.log(data)
 
     if (error) {
-      console.error('Error inserting user:', error.message)
       throw new Error('FAILED_TO_INSERT_USER')
+    }
+
+    if (!data || data.length === 0) {
+      throw new Error('FAILED_TO_FETCH_USER')
     }
 
     return { message: 'User inserted successfully' }
@@ -52,14 +54,17 @@ const getUsers = async () => {
       throw new Error('FAILED_TO_FETCH_USERS')
     }
 
-    if (!data || (Array.isArray(data) && data.length === 0)) {
+    if (!data || data.length === 0) {
       throw new Error('NO_USERS_FOUND')
     }
 
     return data
-  } catch (err) {
-    console.error('Unexpected error fetching users:', err)
-    throw new Error('UNKNOWN_ERROR')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
@@ -75,14 +80,17 @@ const getUserById = async (id: string) => {
       throw new Error('FAILED_TO_FETCH_USER')
     }
 
-    if (!data || (Array.isArray(data) && data.length === 0)) {
+    if (!data || data.length === 0) {
       throw new Error('NO_USER_FOUND')
     }
 
     return data
-  } catch (err) {
-    console.error('Unexpected error fetching users:', err)
-    throw new Error('UNKNOWN_ERROR')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
@@ -94,18 +102,21 @@ const updateUser = async (id: string, user: Partial<User>) => {
       .eq('id', id)
       .select()
 
-    if (!data) {
-      throw new Error('USER_NOT_FOUND')
-    }
-
     if (error) {
       throw new Error('UPDATE_ERROR')
     }
 
+    if (!data || data.length === 0) {
+      throw new Error('USER_NOT_FOUND')
+    }
+
     return { message: 'User updated successfully' }
-  } catch (err) {
-    console.error('Unexpected error updating user:', err)
-    throw new Error('UNEXPECTED_ERROR')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
@@ -116,14 +127,13 @@ const deleteUser = async (id: string) => {
       .from('users')
       .select('*')
       .eq('id', id)
-      .maybeSingle()
 
     if (fetchError) {
-      return { success: false, error: 'FETCH_ERROR' }
+      throw new Error('FETCH_ERROR')
     }
 
-    if (!existingUser) {
-      return { success: false, error: 'ITEM_NOT_FOUND' }
+    if (!existingUser || existingUser.length === 0) {
+      throw new Error('ITEM_NOT_FOUND')
     }
 
     const { error: deleteError } = await supabase
@@ -132,13 +142,16 @@ const deleteUser = async (id: string) => {
       .eq('id', id)
 
     if (deleteError) {
-      return { success: false, error: 'DELETE_ERROR' }
+      throw new Error('DELETE_ERROR')
     }
 
-    return { success: true, message: 'User deleted successfully' }
-  } catch (err) {
-    console.error('Unexpected error deleting user:', err)
-    return { success: false, error: 'INTERNAL_ERROR' }
+    return { message: 'User deleted successfully' }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 

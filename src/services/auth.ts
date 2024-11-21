@@ -17,7 +17,7 @@ const registerUser = async ({ email, password, name }: User) => {
       throw new Error('INVALID_EMAIL')
     }
 
-    if (existingUser) {
+    if (!existingUser || existingUser.length === 0) {
       throw new Error('USER_ALREADY_EXISTS')
     }
 
@@ -63,7 +63,7 @@ const loginUser = async ({ email, password }: Auth) => {
       .eq('email', email)
       .single()
 
-    if (!existingUser) {
+    if (!existingUser || existingUser.length === 0) {
       throw new Error('USER_NOT_FOUND')
     }
 

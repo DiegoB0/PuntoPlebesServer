@@ -24,15 +24,16 @@ const getItem = async (req: Request, res: Response) => {
 
     res.status(200).json(item)
   } catch (e: any) {
-    switch (e) {
+    console.error('Controller error caught:', e)
+    switch (e.message) {
       case 'FAILED_TO_FETCH_USER':
-        return handleHttp(res, 'FAILED_TO_FETCH_USER', 500)
-      case 'NOT_USER_FOUND':
-        return handleHttp(res, 'NOT_USER_FOUND', 500)
+        return handleHttp(res, 'Failed to fetch users', 500)
+      case 'NO_USER_FOUND':
+        return handleHttp(res, 'No user found', 500)
       case 'UNKNOWN_ERROR':
-        return handleHttp(res, 'UNKNOWN_ERROR', 500)
+        return handleHttp(res, 'An unexpected error occur', 500)
       default:
-        return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
+        return handleHttp(res, 'Internal server error', 500)
     }
   }
 }
@@ -42,7 +43,7 @@ const getItems = async (req: Request, res: Response) => {
     const items = await getUsers()
     res.status(200).json(items)
   } catch (e: any) {
-    switch (e) {
+    switch (e.message) {
       case 'FAILED_TO_FETCH_USERS':
         return handleHttp(res, 'FAILED_TO_FETCH_USERS', 500)
       case 'NOT_USERS_FOUND':
@@ -68,7 +69,7 @@ const addItems = async (req: Request, res: Response) => {
     const responseItem = await insertUser(body)
     res.status(201).json(responseItem)
   } catch (e: any) {
-    switch (e) {
+    switch (e.message) {
       case 'FAILED_EMAIL_CHECK':
         return handleHttp(res, 'Failed to check the email.', 500)
       case 'EMAIL_ALREADY_EXISTS':
@@ -94,7 +95,7 @@ const changeItems = async (req: Request, res: Response) => {
     const updatedItem = await updateUser(itemId, body)
     res.status(200).json(updatedItem)
   } catch (e: any) {
-    switch (e) {
+    switch (e.message) {
       case 'USER_NOT_FOUND':
         return handleHttp(res, 'User not found', 400)
       case 'UPDATE_ERROR':
@@ -111,11 +112,10 @@ const removeItems = async (req: Request, res: Response) => {
   try {
     const itemId = req.params.id
 
-    const { message } = await deleteUser(itemId)
+    const deletedUser = await deleteUser(itemId)
 
-    res.status(200).json(message)
+    res.status(200).json(deletedUser)
   } catch (e: any) {
-    // Display errors depending on the service response
     switch (e.message) {
       case 'ITEM_NOT_FOUND':
         return handleHttp(res, 'Item not found.', 404)

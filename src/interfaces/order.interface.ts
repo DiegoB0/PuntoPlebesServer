@@ -1,6 +1,6 @@
 export interface Order {
   id: number
-  order_number: string
+  order_number: number
   order_status: string
   client_name: string
   client_phone: string

@@ -12,10 +12,17 @@ const createCategoryService = async (categoryData: Category) => {
       throw new Error('Error creating category')
     }
 
+    if (!data) {
+      throw new Error('NO_ITEM_FOUND')
+    }
+
     return data
-  } catch (err) {
-    console.error('Unexpected error:', err)
-    throw new Error('Unexpected error')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
@@ -28,10 +35,17 @@ const getAllCategoriesService = async () => {
       throw new Error('Error fetching categories')
     }
 
+    if (!data || data.length === 0) {
+      throw new Error('NO_ITEM_FOUND')
+    }
+
     return data
-  } catch (err) {
-    console.error('Unexpected error:', err)
-    throw new Error('Unexpected error')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
@@ -48,10 +62,17 @@ const getCategoryService = async (id: number) => {
       throw new Error('Error fetching category')
     }
 
+    if (!data || data.length === 0) {
+      throw new Error('NO_ITEMS_FOUND')
+    }
+
     return data
-  } catch (err) {
-    console.error('Unexpected error:', err)
-    throw new Error('Unexpected error')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
@@ -68,20 +89,39 @@ const updateCategoryService = async (id: number, categoryData: Category) => {
       throw new Error('Error updating category')
     }
 
+    if (!data || data.length === 0) {
+      throw new Error('NO_ITEMS_FOUND')
+    }
+
     const responseData = {
       data,
       message: 'Category updated successfully'
     }
 
     return responseData
-  } catch (err) {
-    console.error('Unexpected error:', err)
-    throw new Error('Unexpected error')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
 const deleteCategoryService = async (id: number) => {
   try {
+    const { data: existingCategory, error: fetchError } = await supabase
+      .from('categories')
+      .select('*')
+      .eq('id', id)
+
+    if (fetchError) {
+      throw new Error('FETCH_ERROR')
+    }
+
+    if (!existingCategory || existingCategory.length === 0) {
+      throw new Error('ITEM_NOT_FOUND')
+    }
     const { error } = await supabase.from('categories').delete().eq('id', id)
 
     if (error) {
@@ -90,9 +130,12 @@ const deleteCategoryService = async (id: number) => {
     }
 
     return true // Return true if deletion was successful
-  } catch (err) {
-    console.error('Unexpected error:', err)
-    throw new Error('Unexpected error')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 

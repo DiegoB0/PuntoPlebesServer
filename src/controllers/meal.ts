@@ -14,10 +14,7 @@ const createMealController = async ({ body }: Request, res: Response) => {
     res.status(201).json(newMeal)
   } catch (err) {
     console.error('Error creating meal:', err)
-    res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to create meal'
-    })
+    return handleHttp(res, 'Failed to create meal', 500)
   }
 }
 

@@ -6,14 +6,29 @@ type Meal = { id: number; price: number }
 
 const insertOrder = async (order: Order) => {
   try {
-    // Step 1: Insert the order without selecting
+    // Step 1: Get the latest order number for today
+    const { data: lastOrder, error: lastOrderError } = await supabase
+      .from('orders')
+      .select('order_number')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single<Order>()
+
+    if (lastOrderError) {
+      throw new Error('LAST_ORDER_FETCH_ERROR')
+    }
+
+    // Step 2: Set order number based on the last order (reset after 100)
+    const orderNumber = lastOrder ? (lastOrder.order_number % 100) + 1 : 1
+
+    // Step 3: Insert the order with the generated order_number and default status
     const { error: orderError } = await supabase.from('orders').insert([
       {
-        order_number: order.order_number,
-        order_status: order.order_status,
+        order_number: orderNumber,
+        order_status: 'En proceso',
         client_name: order.client_name,
         client_phone: order.client_phone,
-        total_price: order.total_price
+        total_price: 0
       }
     ])
 
@@ -21,11 +36,11 @@ const insertOrder = async (order: Order) => {
       throw new Error('ORDER_INSERT_ERROR')
     }
 
-    // Step 2: Retrieve the last inserted order by `order_number`
+    // Step 4: Retrieve the last inserted order by `order_number`
     const { data: insertedOrder, error: selectError } = await supabase
       .from('orders')
       .select('id')
-      .eq('order_number', order.order_number)
+      .eq('order_number', orderNumber)
       .order('created_at', { ascending: false })
       .limit(1)
       .single<OrderResponse>()
@@ -37,7 +52,7 @@ const insertOrder = async (order: Order) => {
     const orderId = insertedOrder.id
     console.log('Inserted order ID:', orderId)
 
-    // Step 3: Calculate the total price based on items
+    // Step 5: Calculate subtotals and insert them into the `subtotals` table
     let totalPrice = 0
     const subtotals: { meal_id: number; subtotal: number }[] = []
 
@@ -55,9 +70,9 @@ const insertOrder = async (order: Order) => {
 
       const mealPrice = mealData.price
       const subtotal = mealPrice * item.quantity
-      totalPrice += mealPrice * item.quantity
+      totalPrice += subtotal
 
-      //Save subtotal for reporting
+      // Save subtotal for reporting
       subtotals.push({ meal_id: item.meal_id, subtotal })
 
       // Insert the order items
@@ -67,7 +82,8 @@ const insertOrder = async (order: Order) => {
           {
             order_id: orderId,
             meal_id: item.meal_id,
-            quantity: item.quantity
+            quantity: item.quantity,
+            subtotal: subtotal
           }
         ])
         .select()
@@ -80,7 +96,7 @@ const insertOrder = async (order: Order) => {
       const itemId = insertedItem.id
       console.log('Inserted order item ID:', itemId)
 
-      // Step 4: Insert the order item details (if any)
+      // Step 6: Insert the order item details (if any)
       if (item.details && item.details.length > 0) {
         const { error: detailsError } = await supabase
           .from('order_item_details')
@@ -97,7 +113,7 @@ const insertOrder = async (order: Order) => {
       }
     }
 
-    // Step 5: Update the total price of the order
+    // Step 7: Update the total price of the order
     const { error: updateError } = await supabase
       .from('orders')
       .update({ total_price: totalPrice })
@@ -107,7 +123,7 @@ const insertOrder = async (order: Order) => {
       throw new Error('ORDER_TOTAL_UPDATE_ERROR')
     }
 
-    // Step 6: Insert the payments (if any)
+    // Step 8: Insert the payments (if any)
     if (order.payments && order.payments.length > 0) {
       const { error: paymentsError } = await supabase.from('payments').insert(
         order.payments.map((payment) => ({
@@ -122,7 +138,7 @@ const insertOrder = async (order: Order) => {
       }
     }
 
-    // Step 7: Calculate exchange based on total_price and amount_given
+    // Step 9: Calculate exchange based on total_price and amount_given
     const totalGiven = order.payments.reduce(
       (sum, payment) => sum + payment.amount_given,
       0
@@ -141,9 +157,12 @@ const insertOrder = async (order: Order) => {
     }
 
     return data
-  } catch (err) {
-    console.error('Unexpected error inserting order:', err)
-    throw new Error('UNEXPECTED_ERROR')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
@@ -157,7 +176,7 @@ const getOrders = async (): Promise<Order[]> => {
         client_name,
         client_phone,
         total_price,
-        items:order_items(meal_id, quantity, order_id, id),
+        items:order_items(meal_id, quantity, subtotal, order_id, id),
         payments(payment_method, amount_given, order_id)
       `)
 
@@ -179,7 +198,7 @@ const getOrders = async (): Promise<Order[]> => {
         // Step 3: Fetch meal names from the 'meals' table based on 'meal_id'
         const { data: mealData, error: mealError } = await supabase
           .from('meals')
-          .select('id, name') // Assuming 'meals' table has 'id' and 'name' columns
+          .select('id, name, price')
 
         if (mealError) {
           console.error('Error fetching meal names:', mealError)
@@ -189,6 +208,10 @@ const getOrders = async (): Promise<Order[]> => {
         // Map meal_id to meal name
         const mealNamesMap = new Map(
           mealData.map((meal: any) => [meal.id, meal.name])
+        )
+
+        const mealPricesMap = new Map(
+          mealData.map((meal: any) => [meal.id, meal.price])
         )
 
         // Step 4: Fetch 'order_item_details' for each 'order_item'
@@ -224,7 +247,8 @@ const getOrders = async (): Promise<Order[]> => {
             // Return the order item with its details and meal name
             return {
               ...item,
-              meal_name: mealNamesMap.get(item.meal_id), // Replace meal_id with the actual meal name
+              meal_name: mealNamesMap.get(item.meal_id),
+              meal_price: mealPricesMap.get(item.meal_id),
               details: parsedDetails || [] // Ensure details are not null or undefined
             }
           })
@@ -236,9 +260,12 @@ const getOrders = async (): Promise<Order[]> => {
     )
 
     return ordersWithDetails
-  } catch (err) {
-    console.error('Unexpected error fetching orders:', err)
-    throw new Error('UNKNOWN_ERROR')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
@@ -255,7 +282,7 @@ const getOrderById = async (id: string): Promise<Order[]> => {
         client_name,
         client_phone,
         total_price,
-        items:order_items(meal_id, quantity, order_id, id),
+        items:order_items(meal_id, quantity, subtotal, order_id, id),
         payments(payment_method, amount_given, order_id)
       `
       )
@@ -279,7 +306,7 @@ const getOrderById = async (id: string): Promise<Order[]> => {
         // Step 3: Fetch meal names from the 'meals' table based on 'meal_id'
         const { data: mealData, error: mealError } = await supabase
           .from('meals')
-          .select('id, name') // Assuming 'meals' table has 'id' and 'name' columns
+          .select('id, name, price') // Assuming 'meals' table has 'id' and 'name' columns
 
         if (mealError) {
           console.error('Error fetching meal names:', mealError)
@@ -289,6 +316,10 @@ const getOrderById = async (id: string): Promise<Order[]> => {
         // Map meal_id to meal name
         const mealNamesMap = new Map(
           mealData.map((meal: any) => [meal.id, meal.name])
+        )
+
+        const mealPricesMap = new Map(
+          mealData.map((meal: any) => [meal.id, meal.price])
         )
 
         // Step 4: Fetch 'order_item_details' for each 'order_item'
@@ -325,6 +356,7 @@ const getOrderById = async (id: string): Promise<Order[]> => {
             return {
               ...item,
               meal_name: mealNamesMap.get(item.meal_id), // Replace meal_id with the actual meal name
+              meal_price: mealPricesMap.get(item.meal_id), // Replace meal_id with the actual meal name
               details: parsedDetails || [] // Ensure details are not null or undefined
             }
           })
@@ -336,9 +368,12 @@ const getOrderById = async (id: string): Promise<Order[]> => {
     )
 
     return ordersWithDetails
-  } catch (err) {
-    console.error('Unexpected error fetching orders:', err)
-    throw new Error('UNKNOWN_ERROR')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
@@ -457,9 +492,12 @@ const updateOrder = async (id: string, updateData: Partial<Order>) => {
     }
 
     return returnData
-  } catch (err) {
-    console.error('Unexpected error updating order:', err)
-    throw new Error('UNKNOWN_UPDATE_ERROR')
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 
@@ -490,9 +528,12 @@ const deleteOrder = async (id: string) => {
     }
 
     return { success: true, message: 'Order deleted successfully' }
-  } catch (err) {
-    console.error('Unexpected error deleting user:', err)
-    return { success: false, error: 'INTERNAL_ERROR' }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    } else {
+      throw new Error('UNKNOWN_ERROR')
+    }
   }
 }
 

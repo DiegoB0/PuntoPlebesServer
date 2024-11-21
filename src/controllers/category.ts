@@ -12,12 +12,17 @@ const createCategoryController = async ({ body }: Request, res: Response) => {
   try {
     const newCategory = await createCategoryService(body)
     res.status(201).json(newCategory)
-  } catch (err) {
-    console.error('Error creating category:', err)
-    res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to create category'
-    })
+  } catch (e: any) {
+    switch (e.message) {
+      case 'USER_NOT_FOUND':
+        return handleHttp(res, 'No user with this email', 409)
+      case 'INVALID_EMAIL':
+        return handleHttp(res, 'Invalid email provided', 400)
+      case 'INCORRECT_PASSWORD':
+        return handleHttp(res, 'Incorrect password provided', 500)
+      default:
+        return handleHttp(res, 'An unexpected error occurred', 500)
+    }
   }
 }
 
