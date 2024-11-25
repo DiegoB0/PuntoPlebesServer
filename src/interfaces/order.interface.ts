@@ -26,7 +26,7 @@ export interface OrderItem {
 export interface OrderItemDetail {
   id: number
   order_item_id: number
-  details: string | string[]
+  details: string[];
 }
 
 export interface Payments {

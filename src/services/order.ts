@@ -6,7 +6,8 @@ type Meal = { id: number; price: number }
 
 const insertOrder = async (order: Order) => {
   try {
-    // Step 1: Get the latest order number for today
+    let orderNumber = 1;
+
     const { data: lastOrder, error: lastOrderError } = await supabase
       .from('orders')
       .select('order_number')
@@ -15,11 +16,11 @@ const insertOrder = async (order: Order) => {
       .single<Order>()
 
     if (lastOrderError) {
-      throw new Error('LAST_ORDER_FETCH_ERROR')
+      console.log("No previous orders, starting new order")
+    } else {
+      orderNumber = lastOrder ? (lastOrder.order_number % 100) + 1 : 1
     }
 
-    // Step 2: Set order number based on the last order (reset after 100)
-    const orderNumber = lastOrder ? (lastOrder.order_number % 100) + 1 : 1
 
     // Step 3: Insert the order with the generated order_number and default status
     const { error: orderError } = await supabase.from('orders').insert([
@@ -378,10 +379,27 @@ const getOrderById = async (id: string): Promise<Order[]> => {
 }
 
 const updateOrder = async (id: string, updateData: Partial<Order>) => {
+
   try {
-    // Initialize a flag to track if any update was attempted
-    let updateOccurred = false
-    let totalPrice = 0 // To track the new total price
+
+    // Check if orders exists
+    const { data: existingOrder, error: fetchError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+
+
+    if (fetchError) {
+      throw new Error('FAILED_TO_FETCH_ORDER')
+    }
+
+    if (!existingOrder || (Array.isArray(existingOrder) && existingOrder.length === 0)) {
+      throw new Error('ORDER_NOT_FOUND')
+    }
+
+    let updateOccurred = false;
+    let totalPrice = 0;
 
     // Step 1: Update the main 'orders' table for basic details
     if (updateData.order_status || updateData.total_price) {
@@ -389,53 +407,70 @@ const updateOrder = async (id: string, updateData: Partial<Order>) => {
         .from('orders')
         .update({
           order_status: updateData.order_status,
-          total_price: updateData.total_price // This will be recalculated later if needed
+          total_price: updateData.total_price
         })
-        .eq('id', id)
+        .eq('id', id);
 
       if (orderError) {
-        console.error('Error updating order details:', orderError)
-        throw new Error('FAILED_TO_UPDATE_ORDER')
+        console.error('Error updating order details:', orderError);
+        throw new Error('FAILED_TO_UPDATE_ORDER');
       }
-      updateOccurred = true
+      updateOccurred = true;
     }
 
-    // Step 2: Update 'order_items' if any are provided
+    // Step 2: Update 'order_items' and insert/update 'details' table
     if (updateData.items && updateData.items.length > 0) {
       await Promise.all(
         updateData.items.map(async (item) => {
+          // Update the order item (meal_id and quantity)
           const { error: itemError } = await supabase
             .from('order_items')
             .update({
               meal_id: item.meal_id,
               quantity: item.quantity
             })
-            .eq('id', item.id)
+            .eq('id', item.id);
 
           if (itemError) {
-            console.error('Error updating order item:', itemError)
-            throw new Error('FAILED_TO_UPDATE_ORDER_ITEM')
+            console.error('Error updating order item:', itemError);
+            throw new Error('FAILED_TO_UPDATE_ORDER_ITEM');
           }
 
-          // Recalculate total price based on the updated items
+          // Insert or update details for this order_item
+          if (item.details && item.details.length > 0) {
+            await Promise.all(
+              item.details.map(async (detail) => {
+                const { error: detailError } = await supabase
+                  .from('details')
+                  .upsert({
+                    order_item_id: item.id, // Link the detail to the order_item
+                    detail: detail // The modification (e.g., "Con queso amarillo")
+                  });
+
+                if (detailError) {
+                  console.error('Error inserting/updating detail:', detailError);
+                  throw new Error('FAILED_TO_UPDATE_DETAIL');
+                }
+              })
+            );
+          }
+
+          // Recalculate total price based on updated items
           const { data: mealData, error: mealError } = await supabase
             .from('meals')
             .select('price')
             .eq('id', item.meal_id)
-            .single<Meal>()
+            .single<Meal>();
 
           if (mealError || !mealData) {
-            console.error(
-              'Error fetching meal price:',
-              mealError?.message || 'No data returned'
-            )
-            throw new Error('Error fetching meal price')
+            console.error('Error fetching meal price:', mealError?.message || 'No data returned');
+            throw new Error('Error fetching meal price');
           }
 
-          totalPrice += mealData.price * item.quantity
+          totalPrice += mealData.price * item.quantity;
         })
-      )
-      updateOccurred = true
+      );
+      updateOccurred = true;
     }
 
     // Step 3: Update 'payments' if any are provided
@@ -448,20 +483,20 @@ const updateOrder = async (id: string, updateData: Partial<Order>) => {
               payment_method: payment.payment_method,
               amount_given: payment.amount_given
             })
-            .eq('order_id', id) // Assumes payment records are linked by order_id
+            .eq('order_id', id);
 
           if (paymentError) {
-            console.error('Error updating payment:', paymentError)
-            throw new Error('FAILED_TO_UPDATE_PAYMENT')
+            console.error('Error updating payment:', paymentError);
+            throw new Error('FAILED_TO_UPDATE_PAYMENT');
           }
         })
-      )
-      updateOccurred = true
+      );
+      updateOccurred = true;
     }
 
     // If no fields were updated, throw an error
     if (!updateOccurred) {
-      throw new Error('No fields provided for update')
+      throw new Error('No fields provided for update');
     }
 
     // Step 4: Update the total price of the order if it was recalculated
@@ -469,37 +504,31 @@ const updateOrder = async (id: string, updateData: Partial<Order>) => {
       const { error: updatePriceError } = await supabase
         .from('orders')
         .update({ total_price: totalPrice })
-        .eq('id', id)
+        .eq('id', id);
 
       if (updatePriceError) {
-        console.error('Error updating total price:', updatePriceError.message)
-        throw new Error('Error updating total price')
+        console.error('Error updating total price:', updatePriceError.message);
+        throw new Error('Error updating total price');
       }
     }
 
     // Step 5: Fetch the updated order to return the full data
-    const updatedOrderArray = await getOrderById(id)
+    const updatedOrderArray = await getOrderById(id);
 
     if (updatedOrderArray.length === 0) {
-      throw new Error('NO_ORDER_FOUND_AFTER_UPDATE')
+      throw new Error('NO_ORDER_FOUND_AFTER_UPDATE');
     }
 
-    const updatedOrder = updatedOrderArray[0]
-
-    const returnData = {
-      message: 'Order updated successfully',
-      updatedOrder
-    }
-
-    return returnData
+    const updatedOrder = updatedOrderArray[0];
+    return { message: 'Order updated successfully', updatedOrder };
   } catch (error) {
     if (error instanceof Error) {
-      throw error
+      throw error;
     } else {
-      throw new Error('UNKNOWN_ERROR')
+      throw new Error('UNKNOWN_ERROR');
     }
   }
-}
+};
 
 const deleteOrder = async (id: string) => {
   try {

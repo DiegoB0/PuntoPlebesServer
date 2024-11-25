@@ -8,7 +8,7 @@ import {
 } from '../services/order'
 import { handleHttp } from '../utils/error_handler'
 import { Order } from '../interfaces/order.interface'
-import { validateOrder } from '../utils/validations/order_validator_handler'
+import { validateOrder, validateUpdateOrder } from '../utils/validations/order_validator_handler'
 
 const addItems = async (req: Request, res: Response) => {
   try {
@@ -104,24 +104,49 @@ const getItem = async (req: Request, res: Response) => {
 
 const changeItems = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params
-    const { order } = req.body
+    const { id } = req.params;
+    const order = req.body;
 
-    console.log('Request body:', req.body)
-
-    if (!order || Object.keys(order).length === 0) {
-      return res.status(400).json({ message: 'No data provided for update' })
+    // Validate the incoming order data
+    const { error } = validateUpdateOrder(order);
+    if (error) {
+      return handleHttp(res, error.details[0].message, 400);
     }
 
-    const updatedOrder = await updateOrder(id, order)
-    return res.status(200).json(updatedOrder)
+    // Attempt to update the order
+    const updatedOrder = await updateOrder(id, order);
+
+    // If successful, return the updated order
+    return res.status(200).json(updatedOrder);
+
   } catch (err: unknown) {
     if (err instanceof Error) {
-      return res.status(500).json({ message: err.message })
+      switch (err.message) {
+        case 'FAILED_TO_FETCH_ORDER':
+          return handleHttp(res, 'Order could not be fetched', 500);
+        case 'ORDER_NOT_FOUND':
+          return handleHttp(res, 'Order not found', 404);
+        case 'FAILED_TO_UPDATE_ORDER':
+          return handleHttp(res, 'Failed to update order', 500);
+        case 'FAILED_TO_UPDATE_ORDER_ITEM':
+          return handleHttp(res, 'Failed to update order item', 500);
+        case 'FAILED_TO_UPDATE_DETAIL':
+          return handleHttp(res, 'Failed to update order item details', 500);
+        case 'Error fetching meal price':
+          return handleHttp(res, 'Error fetching meal price', 500);
+        case 'FAILED_TO_UPDATE_PAYMENT':
+          return handleHttp(res, 'Failed to update payment', 500);
+        case 'NO_ORDER_FOUND_AFTER_UPDATE':
+          return handleHttp(res, 'No order found after update', 500);
+        case 'UNKNOWN_ERROR':
+          return handleHttp(res, 'An unknown error occurred', 500);
+        default:
+          return handleHttp(res, 'Internal server error', 500);
+      }
     }
-    return res.status(500).json({ message: 'An unknown error occurred' })
+    return handleHttp(res, 'An unexpected error occurred', 500);
   }
-}
+};
 
 const removeItems = async (req: Request, res: Response) => {
   try {
@@ -129,7 +154,6 @@ const removeItems = async (req: Request, res: Response) => {
 
     const { success, message, error } = await deleteOrder(itemId)
 
-    // Display errors depending on the service response
     if (!success) {
       switch (error) {
         case 'ITEM_NOT_FOUND':
