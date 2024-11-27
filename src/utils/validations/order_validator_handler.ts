@@ -11,7 +11,7 @@ const OrderItemSchema = Joi.object<OrderItem>({
 // Define schema for Payments
 const PaymentsSchema = Joi.object<Payments>({
   payment_method: Joi.string().required(),
-  amount_given: Joi.number().required(),
+  amount_given: Joi.number().required()
 })
 
 // Define schema for Order
@@ -38,7 +38,7 @@ const OrderItemSchemaForUpdate = Joi.object<OrderItem>({
 // Define schema for Payments (optional for updates)
 const PaymentsSchemaForUpdate = Joi.object<Payments>({
   payment_method: Joi.string().optional(),
-  amount_given: Joi.number().optional(),
+  amount_given: Joi.number().optional()
 })
 
 // Define schema for Order (optional for updates)

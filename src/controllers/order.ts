@@ -8,7 +8,10 @@ import {
 } from '../services/order'
 import { handleHttp } from '../utils/error_handler'
 import { Order } from '../interfaces/order.interface'
-import { validateOrder, validateUpdateOrder } from '../utils/validations/order_validator_handler'
+import {
+  validateOrder,
+  validateUpdateOrder
+} from '../utils/validations/order_validator_handler'
 
 const addItems = async (req: Request, res: Response) => {
   try {
@@ -104,49 +107,50 @@ const getItem = async (req: Request, res: Response) => {
 
 const changeItems = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const order = req.body;
+    const { id } = req.params
+    const order = req.body
 
     // Validate the incoming order data
-    const { error } = validateUpdateOrder(order);
+    const { error } = validateUpdateOrder(order)
     if (error) {
-      return handleHttp(res, error.details[0].message, 400);
+      return handleHttp(res, error.details[0].message, 400)
     }
 
     // Attempt to update the order
-    const updatedOrder = await updateOrder(id, order);
+    const updatedOrder = await updateOrder(id, order)
 
     // If successful, return the updated order
-    return res.status(200).json(updatedOrder);
-
+    return res.status(200).json(updatedOrder)
   } catch (err: unknown) {
     if (err instanceof Error) {
       switch (err.message) {
         case 'FAILED_TO_FETCH_ORDER':
-          return handleHttp(res, 'Order could not be fetched', 500);
+          return handleHttp(res, 'Order could not be fetched', 500)
         case 'ORDER_NOT_FOUND':
-          return handleHttp(res, 'Order not found', 404);
+          return handleHttp(res, 'Order not found', 404)
         case 'FAILED_TO_UPDATE_ORDER':
-          return handleHttp(res, 'Failed to update order', 500);
+          return handleHttp(res, 'Failed to update order', 500)
         case 'FAILED_TO_UPDATE_ORDER_ITEM':
-          return handleHttp(res, 'Failed to update order item', 500);
-        case 'FAILED_TO_UPDATE_DETAIL':
-          return handleHttp(res, 'Failed to update order item details', 500);
-        case 'Error fetching meal price':
-          return handleHttp(res, 'Error fetching meal price', 500);
+          return handleHttp(res, 'Failed to update order item', 500)
+        case 'FAILED_TO_INSERT_ORDER_ITEM':
+          return handleHttp(res, 'Failed to insert new order item', 500)
+        case 'FAILED_TO_INSERT_DETAIL':
+          return handleHttp(res, 'Failed to insert order item details', 500)
+        case 'FAILED_TO_FETCH_MEAL_PRICE':
+          return handleHttp(res, 'Error fetching meal price', 500)
         case 'FAILED_TO_UPDATE_PAYMENT':
-          return handleHttp(res, 'Failed to update payment', 500);
-        case 'NO_ORDER_FOUND_AFTER_UPDATE':
-          return handleHttp(res, 'No order found after update', 500);
-        case 'UNKNOWN_ERROR':
-          return handleHttp(res, 'An unknown error occurred', 500);
+          return handleHttp(res, 'Failed to update payment', 500)
+        case 'INSUFFICIENT_PAYMENT_ERROR':
+          return handleHttp(res, 'Insufficient payment', 400)
+        case 'FAILED_TO_INSERT_PAYMENT':
+          return handleHttp(res, 'Failed to insert payment', 500)
         default:
-          return handleHttp(res, 'Internal server error', 500);
+          return handleHttp(res, 'Internal server error', 500)
       }
     }
-    return handleHttp(res, 'An unexpected error occurred', 500);
+    return handleHttp(res, 'An unexpected error occurred', 500)
   }
-};
+}
 
 const removeItems = async (req: Request, res: Response) => {
   try {

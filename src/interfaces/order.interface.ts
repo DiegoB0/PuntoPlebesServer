@@ -14,19 +14,20 @@ export interface Order {
 }
 
 export interface OrderItem {
-  id: number
+  id?: number
   order_id: number
   meal_id: number
   quantity: number
+  subtotal?: number
 
   // Item details (can be string or array of strings)
-  details: OrderItemDetail[]
+  details?: OrderItemDetail[]
 }
 
 export interface OrderItemDetail {
   id: number
   order_item_id: number
-  details: string[];
+  details: string[]
 }
 
 export interface Payments {

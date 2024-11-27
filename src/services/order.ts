@@ -6,7 +6,7 @@ type Meal = { id: number; price: number }
 
 const insertOrder = async (order: Order) => {
   try {
-    let orderNumber = 1;
+    let orderNumber = 1
 
     const { data: lastOrder, error: lastOrderError } = await supabase
       .from('orders')
@@ -16,11 +16,10 @@ const insertOrder = async (order: Order) => {
       .single<Order>()
 
     if (lastOrderError) {
-      console.log("No previous orders, starting new order")
+      console.log('No previous orders, starting new order')
     } else {
       orderNumber = lastOrder ? (lastOrder.order_number % 100) + 1 : 1
     }
-
 
     // Step 3: Insert the order with the generated order_number and default status
     const { error: orderError } = await supabase.from('orders').insert([
@@ -177,6 +176,7 @@ const getOrders = async (): Promise<Order[]> => {
         client_name,
         client_phone,
         total_price,
+        created_at,
         items:order_items(meal_id, quantity, subtotal, order_id, id),
         payments(payment_method, amount_given, order_id)
       `)
@@ -230,15 +230,27 @@ const getOrders = async (): Promise<Order[]> => {
 
             // Step 5: Validate and parse the details if available
             const parsedDetails = itemDetails.map((detail: any) => {
-              // Only parse details if it's a string (assuming the 'details' field is sometimes a stringified JSON)
               let parsedDetail = detail.details
 
-              // Check if it's a string, then parse
+              // Log the details to see what's being passed
+              console.log('Details before parsing:', parsedDetail)
+
+              // Check if the details field is a string and whether it can be parsed as JSON
               if (typeof parsedDetail === 'string') {
-                try {
-                  parsedDetail = JSON.parse(parsedDetail) // Parsing the stringified JSON into an object
-                } catch (e) {
-                  console.error('Failed to parse details:', e)
+                // Check if it starts with a possible valid JSON format
+                if (
+                  parsedDetail.trim().startsWith('{') ||
+                  parsedDetail.trim().startsWith('[')
+                ) {
+                  try {
+                    parsedDetail = JSON.parse(parsedDetail)
+                  } catch (e) {
+                    console.error('Failed to parse details:', e)
+                    parsedDetail = {} // Set to an empty object or fallback value
+                  }
+                } else {
+                  // If it's not valid JSON, treat it as a plain string
+                  parsedDetail = parsedDetail
                 }
               }
 
@@ -283,6 +295,7 @@ const getOrderById = async (id: string): Promise<Order[]> => {
         client_name,
         client_phone,
         total_price,
+        created_at,
         items:order_items(meal_id, quantity, subtotal, order_id, id),
         payments(payment_method, amount_given, order_id)
       `
@@ -338,15 +351,27 @@ const getOrderById = async (id: string): Promise<Order[]> => {
 
             // Step 5: Validate and parse the details if available
             const parsedDetails = itemDetails.map((detail: any) => {
-              // Only parse details if it's a string (assuming the 'details' field is sometimes a stringified JSON)
               let parsedDetail = detail.details
 
-              // Check if it's a string, then parse
+              // Log the details to see what's being passed
+              console.log('Details before parsing:', parsedDetail)
+
+              // Check if the details field is a string and whether it can be parsed as JSON
               if (typeof parsedDetail === 'string') {
-                try {
-                  parsedDetail = JSON.parse(parsedDetail) // Parsing the stringified JSON into an object
-                } catch (e) {
-                  console.error('Failed to parse details:', e)
+                // Check if it starts with a possible valid JSON format
+                if (
+                  parsedDetail.trim().startsWith('{') ||
+                  parsedDetail.trim().startsWith('[')
+                ) {
+                  try {
+                    parsedDetail = JSON.parse(parsedDetail)
+                  } catch (e) {
+                    console.error('Failed to parse details:', e)
+                    parsedDetail = {} // Set to an empty object or fallback value
+                  }
+                } else {
+                  // If it's not valid JSON, treat it as a plain string
+                  parsedDetail = parsedDetail
                 }
               }
 
@@ -379,102 +404,153 @@ const getOrderById = async (id: string): Promise<Order[]> => {
 }
 
 const updateOrder = async (id: string, updateData: Partial<Order>) => {
-
   try {
+    let totalPrice = 0
+    const subtotals: { meal_id: number; subtotal: number }[] = []
 
-    // Check if orders exists
-    const { data: existingOrder, error: fetchError } = await supabase
+    // Update the main order details
+    const { error: orderError } = await supabase
       .from('orders')
-      .select('*')
+      .update({
+        client_name: updateData.client_name,
+        client_phone: updateData.client_phone,
+        order_status: updateData.order_status
+      })
       .eq('id', id)
-      .maybeSingle()
 
-
-    if (fetchError) {
-      throw new Error('FAILED_TO_FETCH_ORDER')
+    if (orderError) {
+      throw new Error('FAILED_TO_UPDATE_ORDER')
     }
 
-    if (!existingOrder || (Array.isArray(existingOrder) && existingOrder.length === 0)) {
-      throw new Error('ORDER_NOT_FOUND')
-    }
-
-    let updateOccurred = false;
-    let totalPrice = 0;
-
-    // Step 1: Update the main 'orders' table for basic details
-    if (updateData.order_status || updateData.total_price) {
-      const { error: orderError } = await supabase
-        .from('orders')
-        .update({
-          order_status: updateData.order_status,
-          total_price: updateData.total_price
-        })
-        .eq('id', id);
-
-      if (orderError) {
-        console.error('Error updating order details:', orderError);
-        throw new Error('FAILED_TO_UPDATE_ORDER');
-      }
-      updateOccurred = true;
-    }
-
-    // Step 2: Update 'order_items' and insert/update 'details' table
     if (updateData.items && updateData.items.length > 0) {
+      const { error: deleteItemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', id)
+
+      if (deleteItemsError) {
+        throw new Error('FAILED_TO_DELETE_ORDER_ITEMS')
+      }
+
       await Promise.all(
         updateData.items.map(async (item) => {
-          // Update the order item (meal_id and quantity)
-          const { error: itemError } = await supabase
+          const { data: insertedItem, error: insertItemError } = await supabase
             .from('order_items')
-            .update({
+            .insert({
+              order_id: id,
               meal_id: item.meal_id,
               quantity: item.quantity
             })
-            .eq('id', item.id);
+            .select()
 
-          if (itemError) {
-            console.error('Error updating order item:', itemError);
-            throw new Error('FAILED_TO_UPDATE_ORDER_ITEM');
+          if (insertItemError) {
+            throw new Error('FAILED_TO_INSERT_ORDER_ITEM')
           }
 
-          // Insert or update details for this order_item
+          if (!insertedItem) {
+            throw new Error('FAILED_TO_INSERT_ORDER_ITEM')
+          }
+
+          const orderItemId = (insertedItem as any)[0].id
+
           if (item.details && item.details.length > 0) {
             await Promise.all(
               item.details.map(async (detail) => {
                 const { error: detailError } = await supabase
-                  .from('details')
-                  .upsert({
-                    order_item_id: item.id, // Link the detail to the order_item
-                    detail: detail // The modification (e.g., "Con queso amarillo")
-                  });
+                  .from('order_item_details')
+                  .insert({
+                    order_item_id: orderItemId,
+                    details: detail
+                  })
 
                 if (detailError) {
-                  console.error('Error inserting/updating detail:', detailError);
-                  throw new Error('FAILED_TO_UPDATE_DETAIL');
+                  throw new Error('FAILED_TO_INSERT_DETAIL')
                 }
               })
-            );
+            )
           }
 
-          // Recalculate total price based on updated items
           const { data: mealData, error: mealError } = await supabase
             .from('meals')
             .select('price')
             .eq('id', item.meal_id)
-            .single<Meal>();
+            .single<Meal>()
 
           if (mealError || !mealData) {
-            console.error('Error fetching meal price:', mealError?.message || 'No data returned');
-            throw new Error('Error fetching meal price');
+            throw new Error('FAILED_TO_FETCH_MEAL_PRICE')
           }
 
-          totalPrice += mealData.price * item.quantity;
+          const mealPrice = mealData.price
+          const subtotal = mealPrice * item.quantity
+          totalPrice += subtotal
+
+          subtotals.push({ meal_id: item.meal_id, subtotal })
+
+          const { error: subtotalError } = await supabase
+            .from('order_items')
+            .update({
+              subtotal: subtotal
+            })
+            .eq('id', orderItemId)
+
+          if (subtotalError) {
+            throw new Error('FAILED_TO_UPDATE_SUBTOTAL')
+          }
+
+          const { error: totalPriceError } = await supabase
+            .from('orders')
+            .update({
+              total_price: totalPrice
+            })
+            .eq('id', id)
+
+          if (totalPriceError) {
+            throw new Error('FAILED_TO_UPDATE_TOTAL_PRICE')
+          }
         })
-      );
-      updateOccurred = true;
+      )
+    } else {
+      const { data: existingItems, error: fetchItemsError } = await supabase
+        .from('order_items')
+        .select('meal_id, quantity')
+        .eq('order_id', id)
+
+      if (fetchItemsError) {
+        throw new Error('FAILED_TO_FETCH_ORDER_ITEMS')
+      }
+
+      const mealItems = existingItems as any
+
+      for (const item of mealItems || []) {
+        const { data: mealData, error: mealError } = await supabase
+          .from('meals')
+          .select('price')
+          .eq('id', item.meal_id)
+          .single()
+
+        if (mealError || !mealData) {
+          throw new Error('FAILED_TO_FETCH_MEAL_PRICE')
+        }
+
+        const itemMealPrice = (mealData as any).price
+        const subtotal = itemMealPrice * item.quantity
+        totalPrice += subtotal
+
+        subtotals.push({ meal_id: item.meal_id, subtotal })
+
+        const { error: subtotalError } = await supabase
+          .from('order_items')
+          .update({ subtotal })
+          .eq('meal_id', item.meal_id)
+          .eq('order_id', id)
+
+        if (subtotalError) {
+          throw new Error('FAILED_TO_UPDATE_SUBTOTAL')
+        }
+      }
     }
 
-    // Step 3: Update 'payments' if any are provided
-    if (updateData.payments && updateData.payments.length > 0) {
+    if (updateData.payments) {
       await Promise.all(
         updateData.payments.map(async (payment) => {
           const { error: paymentError } = await supabase
@@ -483,52 +559,43 @@ const updateOrder = async (id: string, updateData: Partial<Order>) => {
               payment_method: payment.payment_method,
               amount_given: payment.amount_given
             })
-            .eq('order_id', id);
+            .eq('order_id', id)
 
           if (paymentError) {
-            console.error('Error updating payment:', paymentError);
-            throw new Error('FAILED_TO_UPDATE_PAYMENT');
+            throw new Error('FAILED_TO_UPDATE_PAYMENT')
           }
         })
-      );
-      updateOccurred = true;
+      )
     }
 
-    // If no fields were updated, throw an error
-    if (!updateOccurred) {
-      throw new Error('No fields provided for update');
+    const { data, error } = await supabase.from('payments').select('*')
+
+    if (error) {
+      throw new Error('FAILED_TO_INSERT_PAYMENT')
     }
 
-    // Step 4: Update the total price of the order if it was recalculated
-    if (totalPrice > 0) {
-      const { error: updatePriceError } = await supabase
-        .from('orders')
-        .update({ total_price: totalPrice })
-        .eq('id', id);
-
-      if (updatePriceError) {
-        console.error('Error updating total price:', updatePriceError.message);
-        throw new Error('Error updating total price');
-      }
+    if (!data || data.length === 0) {
+      throw new Error('FAILED_TO_INSERT_PAYMENT')
     }
 
-    // Step 5: Fetch the updated order to return the full data
-    const updatedOrderArray = await getOrderById(id);
+    const amount_given = (data as any)[0].amount_given
+    const totalGiven = data.reduce((sum: number) => sum + amount_given, 0)
+    const exchange = totalGiven - totalPrice
 
-    if (updatedOrderArray.length === 0) {
-      throw new Error('NO_ORDER_FOUND_AFTER_UPDATE');
+    if (exchange < 0) {
+      throw new Error('INSUFFICIENT_PAYMENT_ERROR')
     }
 
-    const updatedOrder = updatedOrderArray[0];
-    return { message: 'Order updated successfully', updatedOrder };
+    return {
+      message: 'Order updated successfully',
+      exchange: exchange,
+      totalPrice,
+      subtotals
+    }
   } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    } else {
-      throw new Error('UNKNOWN_ERROR');
-    }
+    throw error // Pass error back to controller for handling
   }
-};
+}
 
 const deleteOrder = async (id: string) => {
   try {
