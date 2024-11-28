@@ -9,30 +9,28 @@ import {
 import { handleHttp } from '../utils/error_handler'
 import { uploadImage } from '../utils/cloudinary'
 import fs from 'fs-extra'
-import {
-  validateMeal
-} from '../utils/validations/meal_validator_handler'
+import { validateMeal } from '../utils/validations/meal_validator_handler'
 
 const createMealController = async (req: Request, res: Response) => {
   try {
-    let image_id = '';
-    let image_url = '';
+    let image_id = ''
+    let image_url = ''
 
     // Check if an image is uploaded
     if (req.files?.image) {
       // Handle single image upload
       if (!Array.isArray(req.files.image)) {
-        const result = await uploadImage(req.files.image.tempFilePath);
-        console.log(result);
-        image_id = result.public_id;
-        image_url = result.secure_url;
+        const result = await uploadImage(req.files.image.tempFilePath)
+        console.log(result)
+        image_id = result.public_id
+        image_url = result.secure_url
 
         await fs.unlink(req.files.image.tempFilePath)
       } else {
-        console.log('I must be stupid sending a bunch of images to one meal');
+        console.log('I must be stupid sending a bunch of images to one meal')
       }
     } else {
-      console.log('No image uploaded, proceeding without image.');
+      console.log('No image uploaded, proceeding without image.')
     }
 
     const mealData = {
@@ -40,21 +38,19 @@ const createMealController = async (req: Request, res: Response) => {
       ...(image_id && image_url && { image_id, image_url })
     }
 
-
     const { error } = validateMeal(mealData)
     if (error) {
       return handleHttp(res, error.details[0].message, 400)
     }
 
     // Call the service to create the meal
-    const newMeal = await createMealService(mealData);
-    res.status(201).json(newMeal);
-
+    const newMeal = await createMealService(mealData)
+    res.status(201).json(newMeal)
   } catch (err) {
-    console.error('Error creating meal:', err);
-    return handleHttp(res, 'Failed to create meal', 500);
+    console.error('Error creating meal:', err)
+    return handleHttp(res, 'Failed to create meal', 500)
   }
-};
+}
 
 const getAllMealsController = async (req: Request, res: Response) => {
   try {

@@ -15,10 +15,14 @@ const router = Router()
  * http://localhost:5000/meals [POST]
  * Create a new meal
  */
-router.post('/', fileUpload({
-  useTempFiles: true,
-  tempFileDir: './uploads'
-}), createMealController)
+router.post(
+  '/',
+  fileUpload({
+    useTempFiles: true,
+    tempFileDir: './uploads'
+  }),
+  createMealController
+)
 
 /**
  * http://localhost:5000/meals [GET]

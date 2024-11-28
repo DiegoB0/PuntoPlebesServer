@@ -1,4 +1,4 @@
-import { v2 as cloudinary } from "cloudinary"
+import { v2 as cloudinary } from 'cloudinary'
 import 'dotenv/config'
 
 const cloudinary_cloud_name = process.env.CLOUDINARY_CLOUD_NAME as string
@@ -13,15 +13,11 @@ cloudinary.config({
 })
 
 export async function uploadImage(filePath: string) {
-
   return await cloudinary.uploader.upload(filePath, {
-    folder: "meals"
+    folder: 'meals'
   })
-
 }
 
 export async function deleteImage(publicId: string) {
-
   return await cloudinary.uploader.destroy(publicId)
-
 }

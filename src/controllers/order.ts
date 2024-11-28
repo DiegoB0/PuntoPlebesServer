@@ -182,8 +182,7 @@ const removeItems = async (req: Request, res: Response) => {
 
 const getReportItems = async (req: Request, res: Response) => {
   try {
-
-    const period = req.query.period as 'day' | 'week' | 'month' || 'day'
+    const period = (req.query.period as 'day' | 'week' | 'month') || 'day'
     // Get statistics from the service
     const reportsData = await getReports(period)
     res.status(200).json(reportsData)
@@ -192,11 +191,11 @@ const getReportItems = async (req: Request, res: Response) => {
       // Handle errors based on their message
       switch (error.message) {
         case 'FAILED_TO_FETCH_STATICS':
-          return handleHttp(res, 'FAILED_TO_FETCH_STATICS', 500); // Custom error for failed statics
+          return handleHttp(res, 'FAILED_TO_FETCH_STATICS', 500) // Custom error for failed statics
         case 'UNKNOWN_ERROR':
-          return handleHttp(res, 'UNKNOWN_ERROR', 500);
+          return handleHttp(res, 'UNKNOWN_ERROR', 500)
         default:
-          return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500);
+          return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
       }
     }
   }
@@ -204,31 +203,37 @@ const getReportItems = async (req: Request, res: Response) => {
 
 const getStaticsItems = async (req: Request, res: Response) => {
   try {
-
-    const stats = await getStatistics();
-    res.status(200).json(stats);
-
+    const stats = await getStatistics()
+    res.status(200).json(stats)
   } catch (error) {
-    console.error('Error in getStaticsItems controller:', error); // Log error in controller
+    console.error('Error in getStaticsItems controller:', error) // Log error in controller
     if (error instanceof Error) {
       switch (error.message) {
         case 'FAILED_TO_FETCH_TOP_SELLERS':
-          return handleHttp(res, 'Failed to fetch top sellers', 500);
+          return handleHttp(res, 'Failed to fetch top sellers', 500)
         case 'FAILED_TO_FETCH_SALES_BY_PERIOD':
-          return handleHttp(res, 'Failed to fetch sales by period', 500);
+          return handleHttp(res, 'Failed to fetch sales by period', 500)
         case 'FAILED_TO_FETCH_AVERAGE_QUANTITY':
-          return handleHttp(res, 'Failed to fetch average quantity', 500);
+          return handleHttp(res, 'Failed to fetch average quantity', 500)
         case 'FAILED_TO_FETCH_TOTAL_SALES_PER_PRODUCT':
-          return handleHttp(res, 'Failed to fetch total sales per product', 500);
+          return handleHttp(res, 'Failed to fetch total sales per product', 500)
         case 'FAILED_TO_FETCH_ALL_SALES_DATA':
-          return handleHttp(res, 'Failed to fetch all sales data', 500);
+          return handleHttp(res, 'Failed to fetch all sales data', 500)
         default:
-          return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500);
+          return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
       }
     } else {
-      return handleHttp(res, 'UNKNOWN_ERROR', 500);
+      return handleHttp(res, 'UNKNOWN_ERROR', 500)
     }
   }
 }
 
-export { addItems, getItems, getItem, changeItems, removeItems, getReportItems, getStaticsItems }
+export {
+  addItems,
+  getItems,
+  getItem,
+  changeItems,
+  removeItems,
+  getReportItems,
+  getStaticsItems
+}
