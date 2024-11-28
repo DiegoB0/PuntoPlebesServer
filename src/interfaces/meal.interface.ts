@@ -4,4 +4,6 @@ export interface Meal {
   description: string
   price: string
   category_id: number
+  image_id: string
+  image_url: string
 }

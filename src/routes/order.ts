@@ -4,20 +4,18 @@ import {
   getItems,
   getItem,
   changeItems,
-  removeItems
+  removeItems,
+  getReportItems,
+  getStaticsItems
 } from '../controllers/order'
 
 const router = express.Router()
 
 // Route to get the data for the statics
-router.get('/reports', (req, res) => {
-  res.json('Here goes the reports')
-})
+router.get('/reports', getReportItems)
 
 // Route to get the data for the reosts
-router.get('/statics', (req, res) => {
-  res.json('Here goes the statics')
-})
+router.get('/statics', getStaticsItems)
 
 // Route to create a new order along with items and item details
 router.post('/', addItems)

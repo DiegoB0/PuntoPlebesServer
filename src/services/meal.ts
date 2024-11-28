@@ -1,5 +1,6 @@
 import { Meal } from '../interfaces/meal.interface'
 import supabase from '../config/supabase'
+import { deleteImage } from '../utils/cloudinary'
 
 const createMealService = async (mealData: Meal) => {
   try {
@@ -102,6 +103,12 @@ const deleteMealService = async (id: number) => {
     if (!existingMeal || existingMeal.length === 0) {
       throw new Error('ITEM_NOT_FOUND')
     }
+
+    const imageId = (existingMeal as any)[0].image_id
+
+    const result = await deleteImage(imageId)
+
+    console.log(result)
 
     const { error } = await supabase.from('meals').delete().eq('id', id)
 

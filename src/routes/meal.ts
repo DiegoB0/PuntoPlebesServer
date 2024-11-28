@@ -7,13 +7,18 @@ import {
   deleteMealController
 } from '../controllers/meal'
 
+import fileUpload from 'express-fileupload'
+
 const router = Router()
 
 /**
  * http://localhost:5000/meals [POST]
  * Create a new meal
  */
-router.post('/', createMealController)
+router.post('/', fileUpload({
+  useTempFiles: true,
+  tempFileDir: './uploads'
+}), createMealController)
 
 /**
  * http://localhost:5000/meals [GET]
