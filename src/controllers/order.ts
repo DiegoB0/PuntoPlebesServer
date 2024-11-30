@@ -42,8 +42,6 @@ const addItems = async (req: Request, res: Response) => {
         return handleHttp(res, 'Failed to update order total price', 500)
       case 'PAYMENTS_INSERT_ERROR':
         return handleHttp(res, 'Failed to process payments', 500)
-      case 'INSUFFICIENT_PAYMENT_ERROR':
-        return handleHttp(res, 'Payment amount is insufficient', 400)
       default:
         return handleHttp(res, 'An unexpected error occurred', 500)
     }

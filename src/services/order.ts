@@ -123,6 +123,7 @@ const insertOrder = async (order: Order) => {
       throw new Error('ORDER_TOTAL_UPDATE_ERROR')
     }
 
+    let exchange = 0
     // Step 8: Insert the payments (if any)
     if (order.payments && order.payments.length > 0) {
       const { error: paymentsError } = await supabase.from('payments').insert(
@@ -136,17 +137,13 @@ const insertOrder = async (order: Order) => {
       if (paymentsError) {
         throw new Error('PAYMENTS_INSERT_ERROR')
       }
-    }
 
-    // Step 9: Calculate exchange based on total_price and amount_given
-    const totalGiven = order.payments.reduce(
-      (sum, payment) => sum + payment.amount_given,
-      0
-    )
-    const exchange = totalGiven - totalPrice
-
-    if (exchange < 0) {
-      throw new Error('INSUFFICIENT_PAYMENT_ERROR')
+      // Step 9: Calculate exchange based on total_price and amount_given
+      const totalGiven = order.payments.reduce(
+        (sum, payment) => sum + payment.amount_given,
+        0
+      )
+      exchange = totalGiven - totalPrice
     }
 
     const data = {

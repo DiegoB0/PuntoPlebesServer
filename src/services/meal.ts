@@ -11,7 +11,11 @@ const createMealService = async (mealData: Meal) => {
 
     if (error) {
       console.error('Error creating meal:', error.message)
-      throw new Error('Error creating meal')
+      throw new Error('ERROR_INSERT_MEAL')
+    }
+
+    if (!data || data.length === 0) {
+      throw new Error('ERROR_FETCH_MEAL')
     }
 
     return data
@@ -30,7 +34,11 @@ const getAllMealsService = async () => {
 
     if (error) {
       console.error('Error fetching meals:', error.message)
-      throw new Error('Error fetching meals')
+      throw new Error('ERROR_FETCH_MEALS')
+    }
+
+    if (!data) {
+      throw new Error('NO_MEALS_FOUND')
     }
 
     return data
@@ -53,7 +61,11 @@ const getMealService = async (id: number) => {
 
     if (error) {
       console.error('Error fetching meal:', error.message)
-      throw new Error('Error fetching meal')
+      throw new Error('ERROR_FETCH_MEAL')
+    }
+
+    if (!data) {
+      throw new Error('MEAL_NOT_FOUND')
     }
 
     return data
@@ -68,6 +80,27 @@ const getMealService = async (id: number) => {
 
 const updateMealService = async (id: number, mealData: Meal) => {
   try {
+    if (mealData.image_id) {
+      const { data: existingMeal, error: fetchError } = await supabase
+        .from('meals')
+        .select('*')
+        .eq('id', id)
+
+      if (fetchError) {
+        throw new Error('FETCH_ERROR')
+      }
+
+      if (!existingMeal || existingMeal.length === 0) {
+        throw new Error('ITEM_NOT_FOUND')
+      }
+
+      const imageId = (existingMeal as any)[0].image_id
+
+      const result = await deleteImage(imageId)
+
+      console.log(result)
+    }
+
     const { data, error } = await supabase
       .from('meals')
       .update(mealData)
@@ -76,7 +109,7 @@ const updateMealService = async (id: number, mealData: Meal) => {
 
     if (error) {
       console.error('Error updating meal:', error.message)
-      throw new Error('Error updating meal')
+      throw new Error('UPDATE_MEAL_ERROR')
     }
 
     return data
@@ -96,34 +129,20 @@ const deleteMealService = async (id: number) => {
       .select('*')
       .eq('id', id)
 
-    if (fetchError) {
-      throw new Error('FETCH_ERROR')
-    }
-
-    if (!existingMeal || existingMeal.length === 0) {
+    if (fetchError) throw new Error('FETCH_ERROR')
+    if (!existingMeal || existingMeal.length === 0)
       throw new Error('ITEM_NOT_FOUND')
-    }
 
     const imageId = (existingMeal as any)[0].image_id
-
-    const result = await deleteImage(imageId)
-
-    console.log(result)
+    await deleteImage(imageId)
 
     const { error } = await supabase.from('meals').delete().eq('id', id)
-
-    if (error) {
-      console.error('Error deleting meal:', error.message)
-      throw new Error('Error deleting meal')
-    }
+    if (error) throw new Error('DELETE_MEAL_ERROR')
 
     return true
   } catch (error) {
-    if (error instanceof Error) {
-      throw error
-    } else {
-      throw new Error('UNKNOWN_ERROR')
-    }
+    if (error instanceof Error) throw error
+    else throw new Error('UNKNOWN_ERROR')
   }
 }
 

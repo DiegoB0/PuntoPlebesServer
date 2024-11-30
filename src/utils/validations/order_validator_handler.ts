@@ -19,7 +19,7 @@ const CreateOrderSchema = Joi.object<Order>({
   client_name: Joi.string().required(),
   client_phone: Joi.string().required(),
   items: Joi.array().items(OrderItemSchema).required(), // items array is required
-  payments: Joi.array().items(PaymentsSchema).required() // payments array is required
+  payments: Joi.array().items(PaymentsSchema).optional() // payments array is required
 })
 
 // Validate function

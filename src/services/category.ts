@@ -9,7 +9,7 @@ const createCategoryService = async (categoryData: Category) => {
 
     if (error) {
       console.error('Error creating category:', error.message)
-      throw new Error('Error creating category')
+      throw new Error('CREATE_CATEGORY_ERROR')
     }
 
     if (!data) {
@@ -32,7 +32,7 @@ const getAllCategoriesService = async () => {
 
     if (error) {
       console.error('Error fetching categories:', error.message)
-      throw new Error('Error fetching categories')
+      throw new Error('FETCH_CATEGORIES_ERROR')
     }
 
     if (!data || data.length === 0) {
@@ -59,11 +59,11 @@ const getCategoryService = async (id: number) => {
 
     if (error) {
       console.error('Error fetching category:', error.message)
-      throw new Error('Error fetching category')
+      throw new Error('FETCH_CATEGORY_ERROR')
     }
 
-    if (!data || data.length === 0) {
-      throw new Error('NO_ITEMS_FOUND')
+    if (!data) {
+      throw new Error('CATEGORY_NOT_FOUND')
     }
 
     return data
@@ -86,11 +86,11 @@ const updateCategoryService = async (id: number, categoryData: Category) => {
 
     if (error) {
       console.error('Error updating category:', error.message)
-      throw new Error('Error updating category')
+      throw new Error('UPDATE_CATEGORY_ERROR')
     }
 
     if (!data || data.length === 0) {
-      throw new Error('NO_ITEMS_FOUND')
+      throw new Error('CATEGORY_NOT_FOUND')
     }
 
     const responseData = {
@@ -116,17 +116,19 @@ const deleteCategoryService = async (id: number) => {
       .eq('id', id)
 
     if (fetchError) {
+      console.error('Error fetching category:', fetchError.message)
       throw new Error('FETCH_ERROR')
     }
 
     if (!existingCategory || existingCategory.length === 0) {
-      throw new Error('ITEM_NOT_FOUND')
+      throw new Error('CATEGORY_NOT_FOUND')
     }
+
     const { error } = await supabase.from('categories').delete().eq('id', id)
 
     if (error) {
       console.error('Error deleting category:', error.message)
-      throw new Error('Error deleting category')
+      throw new Error('DELETE_CATEGORY_ERROR')
     }
 
     return true // Return true if deletion was successful

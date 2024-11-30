@@ -40,7 +40,14 @@ router.get('/:id', getMealController)
  * http://localhost:5000/meals/:id [PUT]
  * Update a meal by ID
  */
-router.put('/:id', updateMealController)
+router.put(
+  '/:id',
+  fileUpload({
+    useTempFiles: true,
+    tempFileDir: './uploads'
+  }),
+  updateMealController
+)
 
 /**
  * http://localhost:5000/meals/:id [DELETE]

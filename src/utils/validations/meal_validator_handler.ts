@@ -14,3 +14,17 @@ const CreateMealSchema = Joi.object<Meal>({
 export const validateMeal = (meal: Meal) => {
   return CreateMealSchema.validate(meal)
 }
+
+//Define the joi schema for creating meals
+const UpdateMealSchema = Joi.object<Meal>({
+  name: Joi.string().optional(),
+  description: Joi.string().optional(),
+  price: Joi.number().optional(),
+  category_id: Joi.number().optional(),
+  image_id: Joi.string().optional(),
+  image_url: Joi.string().optional()
+})
+
+export const validateMealUpdate = (meal: Meal) => {
+  return UpdateMealSchema.validate(meal)
+}

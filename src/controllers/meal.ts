@@ -9,7 +9,10 @@ import {
 import { handleHttp } from '../utils/error_handler'
 import { uploadImage } from '../utils/cloudinary'
 import fs from 'fs-extra'
-import { validateMeal } from '../utils/validations/meal_validator_handler'
+import {
+  validateMeal,
+  validateMealUpdate
+} from '../utils/validations/meal_validator_handler'
 
 const createMealController = async (req: Request, res: Response) => {
   try {
@@ -18,19 +21,14 @@ const createMealController = async (req: Request, res: Response) => {
 
     // Check if an image is uploaded
     if (req.files?.image) {
-      // Handle single image upload
       if (!Array.isArray(req.files.image)) {
         const result = await uploadImage(req.files.image.tempFilePath)
-        console.log(result)
         image_id = result.public_id
         image_url = result.secure_url
-
         await fs.unlink(req.files.image.tempFilePath)
       } else {
-        console.log('I must be stupid sending a bunch of images to one meal')
+        return handleHttp(res, 'Multiple images are not supported', 400)
       }
-    } else {
-      console.log('No image uploaded, proceeding without image.')
     }
 
     const mealData = {
@@ -43,12 +41,19 @@ const createMealController = async (req: Request, res: Response) => {
       return handleHttp(res, error.details[0].message, 400)
     }
 
-    // Call the service to create the meal
     const newMeal = await createMealService(mealData)
     res.status(201).json(newMeal)
-  } catch (err) {
-    console.error('Error creating meal:', err)
-    return handleHttp(res, 'Failed to create meal', 500)
+  } catch (err: any) {
+    switch (err.message) {
+      case 'ERROR_INSERT_MEAL':
+        return handleHttp(res, 'Error inserting meal', 500)
+      case 'ERROR_FETCH_MEAL':
+        return handleHttp(res, 'Failed to retrieve inserted meal', 500)
+      case 'UNKNOWN_ERROR':
+        return handleHttp(res, 'An unexpected error occurred', 500)
+      default:
+        return handleHttp(res, 'Internal server error', 500)
+    }
   }
 }
 
@@ -56,65 +61,103 @@ const getAllMealsController = async (req: Request, res: Response) => {
   try {
     const meals = await getAllMealsService()
     res.status(200).json(meals)
-  } catch (err) {
-    console.error('Error fetching meals:', err)
-    res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to fetch meals'
-    })
+  } catch (err: any) {
+    switch (err.message) {
+      case 'ERROR_FETCH_MEALS':
+        return handleHttp(res, 'Error fetching meals', 500)
+      case 'NO_MEALS_FOUND':
+        return handleHttp(res, 'No meals found', 404)
+      case 'UNKNOWN_ERROR':
+        return handleHttp(res, 'An unexpected error occurred', 500)
+      default:
+        return handleHttp(res, 'Internal server error', 500)
+    }
   }
 }
 
 const getMealController = async ({ params }: Request, res: Response) => {
   try {
     const meal = await getMealService(Number(params.id))
-    if (!meal)
-      return res
-        .status(404)
-        .json({ error: 'MEAL_NOT_FOUND', message: 'Meal not found' })
     res.status(200).json(meal)
-  } catch (err) {
-    console.error('Error fetching meal:', err)
-    res
-      .status(500)
-      .json({ error: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch meal' })
+  } catch (err: any) {
+    switch (err.message) {
+      case 'ERROR_FETCH_MEAL':
+        return handleHttp(res, 'Error fetching meal', 500)
+      case 'MEAL_NOT_FOUND':
+        return handleHttp(res, 'Meal not found', 404)
+      case 'UNKNOWN_ERROR':
+        return handleHttp(res, 'An unexpected error occurred', 500)
+      default:
+        return handleHttp(res, 'Internal server error', 500)
+    }
   }
 }
 
-const updateMealController = async (
-  { params, body }: Request,
-  res: Response
-) => {
+const updateMealController = async (req: Request, res: Response) => {
   try {
-    const updatedMeal = await updateMealService(Number(params.id), body)
-    if (!updatedMeal)
-      return res
-        .status(404)
-        .json({ error: 'MEAL_NOT_FOUND', message: 'Meal not found' })
+    let mealData = req.body
+
+    // Check if an image is uploaded
+    if (req.files?.image) {
+      // Handle single image upload
+      if (!Array.isArray(req.files.image)) {
+        const result = await uploadImage(req.files.image.tempFilePath)
+        console.log(result)
+        const image_id = result.public_id
+        const image_url = result.secure_url
+
+        mealData = {
+          ...req.body,
+          ...(image_id && image_url && { image_id, image_url })
+        }
+
+        await fs.unlink(req.files.image.tempFilePath)
+      } else {
+        return handleHttp(res, 'Multiple images is not supported')
+      }
+    } else {
+      console.log('No image uploaded, proceeding without image.')
+    }
+
+    const { error } = validateMealUpdate(mealData)
+    if (error) {
+      return handleHttp(res, error.details[0].message, 400)
+    }
+    const updatedMeal = await updateMealService(Number(req.params.id), mealData)
     res.status(200).json(updatedMeal)
-  } catch (err) {
-    console.error('Error updating meal:', err)
-    res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to update meal'
-    })
+  } catch (err: any) {
+    switch (err.message) {
+      case 'FETCH_ERROR':
+        return handleHttp(res, 'Failed to fetch meals', 500)
+      case 'ITEM_NOT_FOUND':
+        return handleHttp(res, 'No meal found', 500)
+      case 'UPDATE_MEAL_ERROR':
+        return handleHttp(res, 'Error updating meal', 500)
+      case 'UNKNOWN_ERROR':
+        return handleHttp(res, 'An unexpected error occur', 500)
+      default:
+        return handleHttp(res, 'Internal server error', 500)
+    }
   }
 }
 
 const deleteMealController = async ({ params }: Request, res: Response) => {
   try {
-    const result = await deleteMealService(Number(params.id))
-    if (!result)
-      return res
-        .status(404)
-        .json({ error: 'MEAL_NOT_FOUND', message: 'Meal not found' })
+    await deleteMealService(Number(params.id))
     res.status(200).json({ message: 'Meal deleted successfully' })
-  } catch (err) {
-    console.error('Error deleting meal:', err)
-    res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to delete meal'
-    })
+  } catch (err: any) {
+    switch (err.message) {
+      case 'FETCH_ERROR':
+        return handleHttp(res, 'Failed to fetch meal', 500)
+      case 'ITEM_NOT_FOUND':
+        return handleHttp(res, 'Meal not found', 404)
+      case 'DELETE_MEAL_ERROR':
+        return handleHttp(res, 'Error deleting meal', 500)
+      case 'UNKNOWN_ERROR':
+        return handleHttp(res, 'An unexpected error occurred', 500)
+      default:
+        return handleHttp(res, 'Internal server error', 500)
+    }
   }
 }
 
