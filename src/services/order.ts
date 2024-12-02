@@ -550,16 +550,35 @@ const updateOrder = async (id: string, updateData: Partial<Order>) => {
     if (updateData.payments) {
       await Promise.all(
         updateData.payments.map(async (payment) => {
-          const { error: paymentError } = await supabase
+          const { data } = await supabase
             .from('payments')
-            .update({
-              payment_method: payment.payment_method,
-              amount_given: payment.amount_given
-            })
+            .select('*')
             .eq('order_id', id)
 
-          if (paymentError) {
-            throw new Error('FAILED_TO_UPDATE_PAYMENT')
+          if (!data || data.length === 0) {
+            const { error: insertPaymentError } = await supabase
+              .from('payments')
+              .insert({
+                payment_method: payment.payment_method,
+                amount_given: payment.amount_given,
+                order_id: id
+              })
+
+            if (insertPaymentError) {
+              throw new Error('FAILED_TO_INSERT_PAYMENT')
+            }
+          } else {
+            const { error: paymentError } = await supabase
+              .from('payments')
+              .update({
+                payment_method: payment.payment_method,
+                amount_given: payment.amount_given
+              })
+              .eq('order_id', id)
+
+            if (paymentError) {
+              throw new Error('FAILED_TO_UPDATE_PAYMENT')
+            }
           }
         })
       )
@@ -571,11 +590,12 @@ const updateOrder = async (id: string, updateData: Partial<Order>) => {
       .eq('order_id', id)
 
     if (error) {
-      throw new Error('FAILED_TO_INSERT_PAYMENT')
+      console.log(error)
     }
 
     if (!data || data.length === 0) {
-      throw new Error('FAILED_TO_INSERT_PAYMENT')
+      console.log(data)
+      throw new Error('FAILED_TO_FETCH_PAYMENT')
     }
 
     const amount_given = (data as any)[0].amount_given
