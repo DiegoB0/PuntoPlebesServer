@@ -741,7 +741,7 @@ const getStatistics = async () => {
   try {
     // 1. Top 5 most sold (by quantity)
     const { data: topSellers, error: topSellersError } =
-      await supabase.rpc('get_top_sellers')
+      await supabase.rpc('get_top_sellers_2')
 
     if (topSellersError) throw new Error('FAILED_TO_FETCH_TOP_SELLERS')
 
@@ -753,14 +753,14 @@ const getStatistics = async () => {
 
     // 4. Total sales per product
     const { data: totalSalesPerProduct, error: totalSalesPerProductError } =
-      await supabase.rpc('get_total_sales_per_product')
+      await supabase.rpc('get_total_sales_per_product_2')
 
     if (totalSalesPerProductError)
       throw new Error('FAILED_TO_FETCH_TOTAL_SALES_PER_PRODUCT')
 
     // 5. Revenue distribution by product
     const { data: revenueDistribution, error: revenueDistributionError } =
-      await supabase.rpc('get_revenue_distribution')
+      await supabase.rpc('get_revenue_distribution_2')
 
     if (revenueDistributionError)
       throw new Error('FAILED_TO_FETCH_REVENUE_DISTRIBUTION')
