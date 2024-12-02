@@ -78,27 +78,28 @@ const getMealService = async (id: number) => {
   }
 }
 
-const updateMealService = async (id: number, mealData: Meal) => {
+const updateMealService = async (id: string, mealData: Meal) => {
   try {
-    if (mealData.image_id) {
-      const { data: existingMeal, error: fetchError } = await supabase
-        .from('meals')
-        .select('*')
-        .eq('id', id)
+    const { data: existingMeal, error: fetchError } = await supabase
+      .from('meals')
+      .select('*')
+      .eq('id', id)
 
-      if (fetchError) {
-        throw new Error('FETCH_ERROR')
-      }
+    if (fetchError) {
+      console.log("Some error related to fetching")
+      throw new Error('FETCH_ERROR')
+    }
 
-      if (!existingMeal || existingMeal.length === 0) {
-        throw new Error('ITEM_NOT_FOUND')
-      }
+    if (!existingMeal || existingMeal.length === 0) {
+      console.log("Didnt find anything apparently")
+      throw new Error('ITEM_NOT_FOUND')
+    }
 
-      const imageId = (existingMeal as any)[0].image_id
+    const meal = (existingMeal as any)[0]
 
-      const result = await deleteImage(imageId)
-
-      console.log(result)
+    if (meal.image_id) {
+      const imageId = meal.image_id
+      await deleteImage(imageId)
     }
 
     const { data, error } = await supabase
@@ -112,6 +113,10 @@ const updateMealService = async (id: number, mealData: Meal) => {
       throw new Error('UPDATE_MEAL_ERROR')
     }
 
+    if (!data || data.length === 0) {
+      console.log("It didnt return any data")
+    }
+
     return data
   } catch (error) {
     if (error instanceof Error) {
@@ -122,7 +127,7 @@ const updateMealService = async (id: number, mealData: Meal) => {
   }
 }
 
-const deleteMealService = async (id: number) => {
+const deleteMealService = async (id: string) => {
   try {
     const { data: existingMeal, error: fetchError } = await supabase
       .from('meals')
@@ -130,16 +135,26 @@ const deleteMealService = async (id: number) => {
       .eq('id', id)
 
     if (fetchError) throw new Error('FETCH_ERROR')
+
     if (!existingMeal || existingMeal.length === 0)
       throw new Error('ITEM_NOT_FOUND')
 
-    const imageId = (existingMeal as any)[0].image_id
-    await deleteImage(imageId)
+    const meal = (existingMeal as any)[0]
 
-    const { error } = await supabase.from('meals').delete().eq('id', id)
+    if (meal.image_id) {
+      const imageId = meal.image_id
+      await deleteImage(imageId)
+    }
+
+    const { error } = await supabase
+      .from('meals')
+      .delete()
+      .eq('id', id)
+
     if (error) throw new Error('DELETE_MEAL_ERROR')
 
-    return true
+    return { success: true, message: 'Meal deleted successfully' }
+
   } catch (error) {
     if (error instanceof Error) throw error
     else throw new Error('UNKNOWN_ERROR')

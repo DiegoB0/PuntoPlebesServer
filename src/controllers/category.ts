@@ -84,9 +84,10 @@ const updateCategoryController = async (
   }
 }
 
-const deleteCategoryController = async ({ params }: Request, res: Response) => {
+const deleteCategoryController = async (req: Request, res: Response) => {
   try {
-    const result = await deleteCategoryService(Number(params.id))
+    const itemId = req.params.id
+    const result = await deleteCategoryService(itemId)
 
     if (!result)
       return res

@@ -96,13 +96,13 @@ const getMealController = async ({ params }: Request, res: Response) => {
 const updateMealController = async (req: Request, res: Response) => {
   try {
     let mealData = req.body
+    const itemId = req.params.id
 
     // Check if an image is uploaded
     if (req.files?.image) {
       // Handle single image upload
       if (!Array.isArray(req.files.image)) {
         const result = await uploadImage(req.files.image.tempFilePath)
-        console.log(result)
         const image_id = result.public_id
         const image_url = result.secure_url
 
@@ -123,7 +123,8 @@ const updateMealController = async (req: Request, res: Response) => {
     if (error) {
       return handleHttp(res, error.details[0].message, 400)
     }
-    const updatedMeal = await updateMealService(Number(req.params.id), mealData)
+
+    const updatedMeal = await updateMealService(itemId, mealData)
     res.status(200).json(updatedMeal)
   } catch (err: any) {
     switch (err.message) {
@@ -141,10 +142,13 @@ const updateMealController = async (req: Request, res: Response) => {
   }
 }
 
-const deleteMealController = async ({ params }: Request, res: Response) => {
+const deleteMealController = async (req: Request, res: Response) => {
   try {
-    await deleteMealService(Number(params.id))
-    res.status(200).json({ message: 'Meal deleted successfully' })
+    const itemId = req.params.id
+
+    const { message } = await deleteMealService(itemId)
+    res.status(200).json(message)
+
   } catch (err: any) {
     switch (err.message) {
       case 'FETCH_ERROR':

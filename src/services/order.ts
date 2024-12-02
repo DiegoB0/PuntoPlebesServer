@@ -565,7 +565,7 @@ const updateOrder = async (id: string, updateData: Partial<Order>) => {
       )
     }
 
-    const { data, error } = await supabase.from('payments').select('*')
+    const { data, error } = await supabase.from('payments').select('*').eq("order_id", id)
 
     if (error) {
       throw new Error('FAILED_TO_INSERT_PAYMENT')
@@ -601,7 +601,6 @@ const deleteOrder = async (id: string) => {
       .from('orders')
       .select('*')
       .eq('id', id)
-      .maybeSingle()
 
     if (fetchError) {
       return { success: false, error: 'FETCH_ERROR' }

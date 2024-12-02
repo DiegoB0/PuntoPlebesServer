@@ -108,7 +108,7 @@ const updateCategoryService = async (id: number, categoryData: Category) => {
   }
 }
 
-const deleteCategoryService = async (id: number) => {
+const deleteCategoryService = async (id: string) => {
   try {
     const { data: existingCategory, error: fetchError } = await supabase
       .from('categories')
