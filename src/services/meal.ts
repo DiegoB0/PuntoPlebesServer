@@ -86,12 +86,12 @@ const updateMealService = async (id: string, mealData: Meal) => {
       .eq('id', id)
 
     if (fetchError) {
-      console.log("Some error related to fetching")
+      console.log('Some error related to fetching')
       throw new Error('FETCH_ERROR')
     }
 
     if (!existingMeal || existingMeal.length === 0) {
-      console.log("Didnt find anything apparently")
+      console.log('Didnt find anything apparently')
       throw new Error('ITEM_NOT_FOUND')
     }
 
@@ -114,7 +114,7 @@ const updateMealService = async (id: string, mealData: Meal) => {
     }
 
     if (!data || data.length === 0) {
-      console.log("It didnt return any data")
+      console.log('It didnt return any data')
     }
 
     return data
@@ -146,15 +146,11 @@ const deleteMealService = async (id: string) => {
       await deleteImage(imageId)
     }
 
-    const { error } = await supabase
-      .from('meals')
-      .delete()
-      .eq('id', id)
+    const { error } = await supabase.from('meals').delete().eq('id', id)
 
     if (error) throw new Error('DELETE_MEAL_ERROR')
 
     return { success: true, message: 'Meal deleted successfully' }
-
   } catch (error) {
     if (error instanceof Error) throw error
     else throw new Error('UNKNOWN_ERROR')

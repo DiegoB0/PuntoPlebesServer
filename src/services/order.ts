@@ -565,7 +565,10 @@ const updateOrder = async (id: string, updateData: Partial<Order>) => {
       )
     }
 
-    const { data, error } = await supabase.from('payments').select('*').eq("order_id", id)
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('order_id', id)
 
     if (error) {
       throw new Error('FAILED_TO_INSERT_PAYMENT')

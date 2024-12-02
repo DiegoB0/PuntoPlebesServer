@@ -148,7 +148,6 @@ const deleteMealController = async (req: Request, res: Response) => {
 
     const { message } = await deleteMealService(itemId)
     res.status(200).json(message)
-
   } catch (err: any) {
     switch (err.message) {
       case 'FETCH_ERROR':
