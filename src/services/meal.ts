@@ -30,7 +30,10 @@ const createMealService = async (mealData: Meal) => {
 
 const getAllMealsService = async () => {
   try {
-    const { data, error } = await supabase.from('meals').select('*')
+    const { data, error } = await supabase
+      .from('meals')
+      .select('*, category_name:categories(category_name)')
+      .order('id', { ascending: true })
 
     if (error) {
       console.error('Error fetching meals:', error.message)
