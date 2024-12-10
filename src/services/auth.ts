@@ -14,11 +14,17 @@ const registerUser = async ({ email, password, name }: User) => {
       .maybeSingle()
 
     if (emailCheckError) {
-      throw new Error('INVALID_EMAIL')
+      console.log('INVALID EMAIL', emailCheckError)
+      const error = new Error('INVALID_EMAIL')
+      ;(error as any).status = 422
+      throw error
     }
 
-    if (!existingUser || existingUser.length === 0) {
-      throw new Error('USER_ALREADY_EXISTS')
+    if (existingUser) {
+      console.log('USER ALREADY EXISTS', existingUser)
+      const error = new Error('USER_ALREADY_EXISTS')
+      ;(error as any).status = 409
+      throw error
     }
 
     //Assign user role by default
@@ -30,6 +36,7 @@ const registerUser = async ({ email, password, name }: User) => {
       .select()
 
     if (error || !newUser) {
+      console.log('INSERTION_ERROR', error)
       throw new Error('INSERTION_ERROR')
     }
 
@@ -50,6 +57,7 @@ const registerUser = async ({ email, password, name }: User) => {
     if (error instanceof Error) {
       throw error
     } else {
+      console.log('UNKNOWN_ERROR', error)
       throw new Error('UNKNOWN_ERROR')
     }
   }
