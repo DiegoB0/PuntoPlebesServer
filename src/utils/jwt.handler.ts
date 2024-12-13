@@ -5,7 +5,7 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'token02'
 
 const generateToken = async (id: string) => {
   const jwt = sign({ id }, JWT_SECRET, {
-    expiresIn: '1h'
+    expiresIn: '7d'
   })
   return jwt
 }

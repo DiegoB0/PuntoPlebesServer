@@ -35,6 +35,7 @@ const registerController = async ({ body }: Request, res: Response) => {
 }
 
 const loginController = async ({ body }: Request, res: Response) => {
+  console.log(body)
   const { error } = validateSignInUser(body)
 
   if (error) {
