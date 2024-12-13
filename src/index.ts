@@ -31,6 +31,15 @@ app.use(morgan('dev'))
 // Routes
 app.use(router)
 
+app.use((err: any, req: express.Request, res: express.Response) => {
+  console.error(err.stack) // Log para depuración
+
+  const status = err.status || 500 // Usar el status del error, o 500 por defecto
+  const message = err.message || 'Error desconocido del servidor.' // Mensaje personalizado o genérico
+
+  res.status(status).json({ message }) // Enviar la respuesta al cliente
+})
+
 // Global error handler for invalid JSON
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   if (err instanceof SyntaxError) {
