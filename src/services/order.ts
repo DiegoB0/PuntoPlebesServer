@@ -154,6 +154,8 @@ const insertOrder = async (order: Order) => {
       subtotals
     }
 
+    await redis.rpush('orders', JSON.stringify(order))
+
     return data
   } catch (error) {
     if (error instanceof Error) {
@@ -632,6 +634,8 @@ const updateOrder = async (id: string, updateData: Partial<Order>) => {
       throw new Error('INSUFFICIENT_PAYMENT_ERROR')
     }
 
+    await redis.del('orders')
+
     return {
       message: 'Order updated successfully',
       exchange: exchange,
@@ -641,6 +645,11 @@ const updateOrder = async (id: string, updateData: Partial<Order>) => {
   } catch (error) {
     throw error // Pass error back to controller for handling
   }
+}
+
+interface OrderId {
+  id: string;
+  // Add other order properties here
 }
 
 const deleteOrder = async (id: string) => {
@@ -668,14 +677,44 @@ const deleteOrder = async (id: string) => {
       return { success: false, error: 'DELETE_ERROR' }
     }
 
-    const cachedOrders = await redis.get('orders')
+    const cachedOrders = await redis.get("orders");
     if (cachedOrders) {
-      const orders = JSON.parse(cachedOrders)
-      const updatedOrders = orders.filter((order: any) => order.id !== id)
+      try {
+        const orderList = JSON.parse(cachedOrders) as OrderId[];
+        console.log('Before filtering:', orderList.length, 'orders');
+        console.log('Type of id to delete:', typeof id);
 
-      await redis.set('orders', JSON.stringify(updatedOrders))
+        // Convert IDs to strings and compare
+        const updatedOrders = orderList.filter((order: OrderId) => {
+          const orderId = String(order.id);
+          const targetId = String(id);
+          console.log(`Comparing order ID ${orderId} (${typeof orderId}) with target ID ${targetId} (${typeof targetId})`);
+          return orderId !== targetId;
+        });
+
+        console.log('After filtering:', updatedOrders.length, 'orders');
+
+        // Verify the item was actually removed
+        const itemStillExists = updatedOrders.some(order => String(order.id) === String(id));
+        if (itemStillExists) {
+          console.error('Failed to remove item from cache - item still exists after filtering');
+        } else {
+          console.log('Successfully removed item from cache');
+        }
+
+        await redis.set("orders", JSON.stringify(updatedOrders), 'EX', 3600);
+
+        // Verify the update
+        const verificationCache = await redis.get("orders");
+        const verificationList = verificationCache ? JSON.parse(verificationCache) as Order[] : [];
+        console.log('Verification count:', verificationList.length, 'orders');
+      } catch (parseError) {
+        console.error('Error parsing/updating Redis cache:', parseError);
+        await redis.del("orders");
+      }
     }
 
+    // await redis.del('orders')
     await redis.del(`order:${id}`)
 
     return { success: true, message: 'Order deleted successfully' }
