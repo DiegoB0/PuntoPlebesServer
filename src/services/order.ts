@@ -1,5 +1,6 @@
 import { Order, OrderItem } from '../interfaces/order.interface'
 import supabase from '../config/supabase'
+import { redis } from '../config/redis'
 
 type OrderResponse = { id: number }
 type Meal = { id: number; price: number }
@@ -165,6 +166,14 @@ const insertOrder = async (order: Order) => {
 
 const getOrders = async (): Promise<Order[]> => {
   try {
+    // Step 1: Check Redis cache for data
+    const cachedOrders = await redis.get('orders')
+    if (cachedOrders) {
+      console.log('Returning orders from cache')
+      return JSON.parse(cachedOrders)
+    }
+
+    console.log('Cache miss: Fetching orders from database')
     // Step 1: Query the 'orders' table and related 'order_items' and 'payments'
     const { data, error } = await supabase.from('orders').select(`
         id,
@@ -269,6 +278,8 @@ const getOrders = async (): Promise<Order[]> => {
       })
     )
 
+    await redis.set('orders', JSON.stringify(ordersWithDetails), 'EX', 3600)
+
     return ordersWithDetails
   } catch (error) {
     if (error instanceof Error) {
@@ -281,6 +292,14 @@ const getOrders = async (): Promise<Order[]> => {
 
 const getOrderById = async (id: string): Promise<Order[]> => {
   try {
+    // Step 1: Check if the data exists in Redis
+    const cachedData = await redis.get(`order:${id}`)
+    if (cachedData) {
+      console.log('Cache hit for order ID:', id)
+      return JSON.parse(cachedData) as Order[]
+    }
+
+    console.log('Cache miss for order ID:', id)
     // Step 1: Query the 'orders' table and related 'order_items' and 'payments'
     const { data, error } = await supabase
       .from('orders')
@@ -388,6 +407,13 @@ const getOrderById = async (id: string): Promise<Order[]> => {
         // Return the enriched order with items and their details
         return { ...orderWithDetails, items: itemsWithDetails }
       })
+    )
+
+    // Step 4: Cache the fetched data in Redis
+    await redis.setex(
+      `order:${id}`,
+      3600, // Cache expires in 1 hour
+      JSON.stringify(ordersWithDetails)
     )
 
     return ordersWithDetails
@@ -641,6 +667,16 @@ const deleteOrder = async (id: string) => {
     if (deleteError) {
       return { success: false, error: 'DELETE_ERROR' }
     }
+
+    const cachedOrders = await redis.get('orders')
+    if (cachedOrders) {
+      const orders = JSON.parse(cachedOrders)
+      const updatedOrders = orders.filter((order: any) => order.id !== id)
+
+      await redis.set('orders', JSON.stringify(updatedOrders))
+    }
+
+    await redis.del(`order:${id}`)
 
     return { success: true, message: 'Order deleted successfully' }
   } catch (error) {
