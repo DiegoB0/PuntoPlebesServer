@@ -2,7 +2,6 @@ import { Order, OrderItem } from '../interfaces/order.interface'
 import supabase from '../config/supabase'
 import { redis } from '../config/redis'
 
-type OrderResponse = { id: number }
 type Meal = { id: number; price: number }
 
 const getLastOrderNumber = async (): Promise<number> => {
@@ -30,33 +29,25 @@ const insertNewOrder = async ({
   clientName: string
   clientPhone: string
 }): Promise<number> => {
-  const { error: insertError } = await supabase.from('orders').insert([
-    {
-      order_number: orderNumber,
-      order_status: 'En proceso',
-      client_name: clientName,
-      client_phone: clientPhone,
-      total_price: 0
-    }
-  ])
+  const { data, error } = await supabase
+    .from('orders')
+    .insert([
+      {
+        order_number: orderNumber,
+        order_status: 'En proceso',
+        client_name: clientName,
+        client_phone: clientPhone,
+        total_price: 0
+      }
+    ])
+    .select('id')
+    .single<Order>()
 
-  if (insertError) {
+  if (error || !data) {
     throw new Error('ORDER_INSERT_ERROR')
   }
 
-  const { data: insertedOrder, error: selectError } = await supabase
-    .from('orders')
-    .select('id')
-    .eq('order_number', orderNumber)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single<OrderResponse>()
-
-  if (selectError || !insertedOrder) {
-    throw new Error('ORDER_RETRIEVE_ERROR')
-  }
-
-  return insertedOrder.id
+  return data.id
 }
 
 const insertOrderItems = async (
@@ -66,58 +57,70 @@ const insertOrderItems = async (
   totalPrice: number
   subtotals: { meal_id: number; subtotal: number }[]
 }> => {
+  // Fetch all meal prices in one query
+  const mealIds = items.map((item) => item.meal_id)
+  const { data: meals, error: mealError } = await supabase
+    .from('meals')
+    .select('id, price')
+    .in('id', mealIds)
+
+  if (mealError || !meals) {
+    throw new Error('MEAL_FETCH_ERROR')
+  }
+
+  const typedMeals = meals as unknown as Meal[]
+
+  // Map meal prices
+  const mealPrices = new Map(typedMeals.map((meal) => [meal.id, meal.price]))
   let totalPrice = 0
-  const subtotals: { meal_id: number; subtotal: number }[] = []
+  const orderItems = []
+  const itemDetails = []
+  const subtotals = []
 
   for (const item of items) {
-    // Fetch meal price
-    const { data: meal, error: mealError } = await supabase
-      .from('meals')
-      .select('price')
-      .eq('id', item.meal_id)
-      .single<Meal>()
-
-    if (mealError || !meal) {
-      throw new Error('MEAL_FETCH_ERROR')
+    const price = mealPrices.get(item.meal_id)
+    if (price === undefined) {
+      throw new Error(`Invalid meal ID: ${item.meal_id}`)
     }
 
-    const subtotal = meal.price * item.quantity
+    const subtotal = price * item.quantity
     totalPrice += subtotal
-
     subtotals.push({ meal_id: item.meal_id, subtotal })
 
-    // Insert order item
-    const { data: insertedItem, error: itemError } = await supabase
-      .from('order_items')
-      .insert([
-        {
-          order_id: orderId,
-          meal_id: item.meal_id,
-          quantity: item.quantity,
-          subtotal
-        }
-      ])
-      .select()
-      .single<OrderResponse>()
+    // Prepare order items and details for batch insert
+    orderItems.push({
+      order_id: orderId,
+      meal_id: item.meal_id,
+      quantity: item.quantity,
+      subtotal
+    })
 
-    if (itemError || !insertedItem) {
-      throw new Error('ORDER_ITEM_INSERT_ERROR')
-    }
-
-    // Insert item details if they exist
     if (item.details && item.details.length > 0) {
-      const { error: detailsError } = await supabase
-        .from('order_item_details')
-        .insert(
-          item.details.map((detail) => ({
-            order_item_id: insertedItem.id,
-            details: detail
-          }))
-        )
+      itemDetails.push(
+        ...item.details.map((detail) => ({
+          details: detail
+        }))
+      )
+    }
+  }
 
-      if (detailsError) {
-        throw new Error('ORDER_ITEM_DETAILS_INSERT_ERROR')
-      }
+  // Batch insert order items
+  const { error: orderItemsError } = await supabase
+    .from('order_items')
+    .insert(orderItems)
+
+  if (orderItemsError) {
+    throw new Error('ORDER_ITEMS_INSERT_ERROR')
+  }
+
+  // Batch insert order item details
+  if (itemDetails.length > 0) {
+    const { error: detailsError } = await supabase
+      .from('order_item_details')
+      .insert(itemDetails)
+
+    if (detailsError) {
+      throw new Error('ORDER_ITEM_DETAILS_INSERT_ERROR')
     }
   }
 
@@ -139,7 +142,7 @@ const updateOrderTotal = async (
 }
 
 const handlePayments = async (
-  payments: { payment_method: string; amount_given: number }[] | undefined,
+  payments: { payment_method: string; amount_given: number }[],
   orderId: number,
   totalPrice: number
 ): Promise<number> => {
@@ -147,7 +150,7 @@ const handlePayments = async (
     return 0 // No payments provided
   }
 
-  const { error: paymentsError } = await supabase.from('payments').insert(
+  const { error } = await supabase.from('payments').insert(
     payments.map((payment) => ({
       payment_method: payment.payment_method,
       amount_given: payment.amount_given,
@@ -155,32 +158,26 @@ const handlePayments = async (
     }))
   )
 
-  if (paymentsError) {
+  if (error) {
     throw new Error('PAYMENTS_INSERT_ERROR')
   }
 
-  // Calculate exchange
   const totalGiven = payments.reduce(
     (sum, payment) => sum + payment.amount_given,
     0
   )
-  return totalGiven - totalPrice
+
+  return totalGiven - totalPrice // Return exchange
 }
 
 const storeOrderInRedis = async (order: any) => {
   try {
     const currentData = await redis.get('orders')
-    let orders = []
-
-    if (currentData) {
-      orders = JSON.parse(currentData)
-    }
+    const orders = currentData ? JSON.parse(currentData) : []
 
     orders.push(order)
 
-    const updatedData = JSON.stringify(orders)
-
-    await redis.set('orders', updatedData)
+    await redis.set('orders', JSON.stringify(orders))
   } catch (error) {
     console.error('Error storing order in Redis:', error)
     throw error instanceof Error ? error : new Error('UNKNOWN_ERROR')
@@ -196,21 +193,24 @@ const insertOrder = async (order: Order) => {
       clientPhone: order.client_phone
     })
 
-    const { totalPrice, subtotals } = await insertOrderItems(
-      order.items,
-      orderId
-    )
-    await updateOrderTotal(orderId, totalPrice)
+    // Parallelizing the fetching of meal prices and inserting order items
+    const [orderItemsResult] = await Promise.all([
+      insertOrderItems(order.items, orderId)
+    ])
 
-    const exchange = await handlePayments(order.payments, orderId, totalPrice)
+    await updateOrderTotal(orderId, orderItemsResult.totalPrice)
 
-    await storeOrderInRedis({ orderId, ...order })
+    // Parallelizing the payment handling and order storage in Redis
+    const [exchange] = await Promise.all([
+      handlePayments(order.payments, orderId, orderItemsResult.totalPrice),
+      storeOrderInRedis({ orderId, ...order })
+    ])
 
     return {
       message: 'Order saved successfully',
       exchange,
-      totalPrice,
-      subtotals
+      totalPrice: orderItemsResult.totalPrice,
+      subtotals: orderItemsResult.subtotals
     }
   } catch (error) {
     console.error('Error inserting order:', error)
