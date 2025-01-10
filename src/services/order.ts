@@ -5,19 +5,29 @@ import { redis } from '../config/redis'
 type Meal = { id: number; price: number }
 
 const getLastOrderNumber = async (): Promise<number> => {
+  const now = new Date()
+  const startOfDay = new Date(now)
+  startOfDay.setHours(3, 0, 0, 0) // Set to 3 AM todaya
+  const endOfDay = new Date(startOfDay)
+  endOfDay.setDate(startOfDay.getDate() + 1)
+
   const { data, error } = await supabase
     .from('orders')
     .select('order_number')
+    .gte('created_at', startOfDay.toISOString()) // Orders created after 3 AM today
+    .lt('created_at', endOfDay.toISOString()) // Orders created before 3 AM tomorrow
     .order('created_at', { ascending: false })
     .limit(1)
     .single<Order>()
 
+  // If there are no orders for the current day, start at 1
   if (error || !data) {
-    console.log('No previous orders, starting new order')
-    return 1
+    console.log('No orders for today, starting new order')
+    return 1 // Reset to 1 at the start of a new day
   }
 
-  return (data.order_number % 100) + 1
+  // Increment the last order number for the day
+  return data.order_number + 1
 }
 
 const insertNewOrder = async ({
