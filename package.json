@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon ./src/index.ts",
     "build": "tsc",
-    "start": "node ./dist/index.js",
+    "start": "node ./dist/src/index.js",
     "typecheck": "tsc --noEmit",
     "check-types": "tsc --pretty --noEmit",
     "check-format": "prettier --check .",
@@ -29,7 +29,8 @@
     "express-fileupload": "^1.5.1",
     "fs-extra": "^11.2.0",
     "ioredis": "^5.4.2",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "moment-timezone": "^0.5.46"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

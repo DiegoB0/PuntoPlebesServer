@@ -23,8 +23,13 @@ const testConnection = async () => {
 // Inicializar la aplicación de Express
 const app = express()
 
+const corsOptions =
+  process.env.NODE_ENV && process.env.NODE_ENV === 'production'
+    ? { origin: ["https://puntoplebes.online", "null"] }
+    : { origin: true }
+
 // Configurar middlewares
-app.use(cors())
+app.use(cors(corsOptions))
 app.use(express.json())
 app.use(morgan('dev'))
 

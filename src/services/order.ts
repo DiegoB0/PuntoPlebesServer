@@ -1,32 +1,31 @@
 import { Order, OrderItem } from '../interfaces/order.interface'
 import supabase from '../config/supabase'
 import { redis } from '../config/redis'
+import moment from 'moment-timezone'
 
 type Meal = { id: number; price: number }
 
 const getLastOrderNumber = async (): Promise<number> => {
-  const now = new Date()
-  const startOfDay = new Date(now)
-  startOfDay.setHours(3, 0, 0, 0) // Set to 3 AM todaya
-  const endOfDay = new Date(startOfDay)
-  endOfDay.setDate(startOfDay.getDate() + 1)
+  const now = moment().tz('America/Monterrey')
+  const startOfDay = now.clone().set({ hour: 3, minute: 0, second: 0, millisecond: 0 })
+  const endOfDay = startOfDay.clone().add(1, 'day')
+
+  const startOfDayISO = startOfDay.toISOString()
+  const endOfDayISO = endOfDay.toISOString()
 
   const { data, error } = await supabase
     .from('orders')
     .select('order_number')
-    .gte('created_at', startOfDay.toISOString()) // Orders created after 3 AM today
-    .lt('created_at', endOfDay.toISOString()) // Orders created before 3 AM tomorrow
+    .gte('created_at', startOfDayISO)
+    .lt('created_at', endOfDayISO)
     .order('created_at', { ascending: false })
     .limit(1)
     .single<Order>()
 
-  // If there are no orders for the current day, start at 1
   if (error || !data) {
-    console.log('No orders for today, starting new order')
-    return 1 // Reset to 1 at the start of a new day
+    return 1
   }
 
-  // Increment the last order number for the day
   return data.order_number + 1
 }
 
