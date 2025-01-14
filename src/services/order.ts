@@ -7,7 +7,9 @@ type Meal = { id: number; price: number }
 
 const getLastOrderNumber = async (): Promise<number> => {
   const now = moment().tz('America/Monterrey')
-  const startOfDay = now.clone().set({ hour: 3, minute: 0, second: 0, millisecond: 0 })
+  const startOfDay = now
+    .clone()
+    .set({ hour: 3, minute: 0, second: 0, millisecond: 0 })
   const endOfDay = startOfDay.clone().add(1, 'day')
 
   const startOfDayISO = startOfDay.toISOString()
