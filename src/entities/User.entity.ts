@@ -1,5 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from "typeorm"
-import { Role } from "./enums/Role.enum"
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn
+} from 'typeorm'
+import { Role } from './enums/Role.enum'
 
 @Entity()
 export class User {
@@ -17,8 +22,8 @@ export class User {
 
   @Column({
     type: 'enum',
-    enum: Role,  // Set the enum for the column
-    default: Role.Cashier,  // Optional: set a default value
+    enum: Role, // Set the enum for the column
+    default: Role.Cashier // Optional: set a default value
   })
   role: Role
 

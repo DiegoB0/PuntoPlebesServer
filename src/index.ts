@@ -1,34 +1,34 @@
-import 'dotenv/config';
-import cors from 'cors';
-import morgan from 'morgan';
-import { router } from './routes';
-import express, { Request, Response, NextFunction } from 'express';
-import { AppDataSource } from './config/typeorm';
+import 'dotenv/config'
+import cors from 'cors'
+import morgan from 'morgan'
+import { router } from './routes'
+import express, { Request, Response, NextFunction } from 'express'
+import { AppDataSource } from './config/typeorm'
 
 // Inicializar la aplicación de Express
-const app = express();
+const app = express()
 
 // CORS configuration
 const corsOptions =
   process.env.NODE_ENV && process.env.NODE_ENV === 'production'
     ? { origin: ['https://puntoplebes.online', 'null'] }
-    : { origin: true };
+    : { origin: true }
 
 // Configuring middlewares
-app.use(cors(corsOptions));
-app.use(express.json());
-app.use(morgan('dev'));
+app.use(cors(corsOptions))
+app.use(express.json())
+app.use(morgan('dev'))
 
 // Routes
-app.use(router);
+app.use(router)
 
 // Global error handler
 app.use((err: any, req: express.Request, res: express.Response) => {
-  console.error(err.stack); // Log for debugging
-  const status = err.status || 500;
-  const message = err.message || 'Error desconocido del servidor.';
-  res.status(status).json({ message });
-});
+  console.error(err.stack) // Log for debugging
+  const status = err.status || 500
+  const message = err.message || 'Error desconocido del servidor.'
+  res.status(status).json({ message })
+})
 
 // Handle invalid JSON
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
@@ -37,19 +37,18 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
       error: 'INVALID_JSON',
       message:
         'The JSON provided is malformed. Please check the syntax and try again.'
-    });
+    })
   }
-  next(err);
-});
-
+  next(err)
+})
 
 // Start Express server only after DB connection is established
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = process.env.PORT || 5000
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
 
 // Connect to database
 AppDataSource.initialize()
   .then(() => {
-    console.log("📦 Database connected!");
+    console.log('📦 Database connected!')
   })
-  .catch((err) => console.error("Error connecting to DB:", err));
+  .catch((err) => console.error('Error connecting to DB:', err))

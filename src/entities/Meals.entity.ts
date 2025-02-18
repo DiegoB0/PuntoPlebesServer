@@ -1,34 +1,42 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
-import { Category } from './Categories.entity';
-import { OrderItem } from './OrderItems.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  OneToMany
+} from 'typeorm'
+import { Category } from './Categories.entity'
+import { OrderItem } from './OrderItems.entity'
 
 @Entity('meals')
 export class Meal {
   @PrimaryGeneratedColumn('increment')
-  id: number;
+  id: number
 
   @Column()
-  name: string;
+  name: string
 
   @Column()
-  description: string;
+  description: string
 
   @Column('decimal')
-  price: number;
+  price: number
 
-  @ManyToOne(() => Category, category => category.id)
+  @ManyToOne(() => Category, (category) => category.id)
   @JoinColumn({ name: 'category_id' })
-  category: Category;
+  category: Category
 
   @OneToMany(() => OrderItem, (orderItem) => orderItem.meal)
-  orderItems: OrderItem[];
+  orderItems: OrderItem[]
 
   @Column()
-  image_id: number;
+  image_id: number
 
   @Column()
-  image_url: string;
+  image_url: string
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at: Date
 }

@@ -1,33 +1,39 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
-import { OrderItem } from './OrderItems.entity';
-import { Payment } from './Payments.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  OneToMany
+} from 'typeorm'
+import { OrderItem } from './OrderItems.entity'
+import { Payment } from './Payments.entity'
 
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn('increment')
-  id: number;
+  id: number
 
   @Column()
-  order_number: number;
+  order_number: number
 
   @Column()
-  order_status: string;
+  order_status: string
 
   @Column()
-  client_name: string;
+  client_name: string
 
   @Column()
-  client_phone: string;
+  client_phone: string
 
   @Column()
-  total_price_numeric: number;
+  total_price_numeric: number
 
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order)
-  orderItems: OrderItem[];
+  orderItems: OrderItem[]
 
   @OneToMany(() => Payment, (payment) => payment.order)
-  payments: Payment[];
+  payments: Payment[]
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at: Date
 }
