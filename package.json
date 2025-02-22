@@ -30,7 +30,8 @@
     "fs-extra": "^11.2.0",
     "ioredis": "^5.4.2",
     "jsonwebtoken": "^9.0.2",
-    "moment-timezone": "^0.5.46"
+    "moment-timezone": "^0.5.46",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

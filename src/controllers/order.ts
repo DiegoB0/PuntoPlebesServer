@@ -6,7 +6,8 @@ import {
   updateOrder,
   deleteOrder,
   getReports,
-  getStatistics
+  getStatistics,
+  getLastOrderNumber
 } from '../services/order'
 import { handleHttp } from '../utils/error_handler'
 import { Order } from '../interfaces/order.interface'
@@ -71,6 +72,23 @@ const getItems = async (req: Request, res: Response) => {
       }
     } else {
       return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
+    }
+  }
+}
+const getLastItem = async (req: Request, res: Response) => {
+  try {
+    const lastOrderNumber = await getLastOrderNumber()
+    res.status(200).json(lastOrderNumber)
+  } catch (error) {
+    if (error instanceof Error) {
+      switch (error.message) {
+        case 'FAILED_TO_FETCH_LAST_ORDER_NUMBER':
+          return handleHttp(res, 'FAILED_TO_FETCH_LAST_ORDER_NUMBER', 500)
+        case 'UNKNOWN_ERROR':
+          return handleHttp(res, 'UNKNOWN_ERROR', 500)
+        default:
+          return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
+      }
     }
   }
 }
@@ -233,5 +251,6 @@ export {
   changeItems,
   removeItems,
   getReportItems,
-  getStaticsItems
+  getStaticsItems,
+  getLastItem
 }

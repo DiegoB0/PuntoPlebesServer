@@ -6,7 +6,8 @@ import {
   changeItems,
   removeItems,
   getReportItems,
-  getStaticsItems
+  getStaticsItems,
+  getLastItem
 } from '../controllers/order'
 
 const router = express.Router()
@@ -22,6 +23,9 @@ router.post('/', addItems)
 
 // Route to get all orders with items and item details
 router.get('/', getItems)
+
+// Route to get the last order number
+router.get('/last', getLastItem)
 
 // Route to get a specific order by ID along with its items and item details
 router.get('/:id', getItem)

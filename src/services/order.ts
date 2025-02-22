@@ -933,5 +933,6 @@ export {
   updateOrder,
   deleteOrder,
   getReports,
-  getStatistics
+  getStatistics,
+  getLastOrderNumber
 }
