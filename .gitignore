@@ -6,3 +6,7 @@
 /src/assets/*
 .DS_Store
 bun.lockb
+# Ignore tmux log files
+tmux-client-*.log
+tmux-server-*.log
+

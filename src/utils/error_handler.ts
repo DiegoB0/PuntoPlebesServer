@@ -1,8 +1,13 @@
 import { Response } from 'express'
 
-const handleHttp = (res: Response, error: string, errorRaw?: any) => {
-  console.log(errorRaw)
-  res.status(500).send({ error })
+const handleHttp = (
+  res: Response,
+  error: string,
+  statusCode = 500,
+  errorRaw?: any
+) => {
+  if (errorRaw) console.error(errorRaw) // Log raw error details
+  res.status(statusCode).json({ success: false, error })
 }
 
 export { handleHttp }

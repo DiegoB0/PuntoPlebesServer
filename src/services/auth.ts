@@ -1,111 +1,91 @@
-import { Auth } from '../interfaces/auth.interface'
-import supabase from '../config/supabase'
-import { encrypt, verified } from '../utils/bcrypt_handler'
-import { User } from '../interfaces/user.interface'
-import { generateToken, generateRereshToken } from '../utils/jwt.handler'
+import { AppDataSource } from '../config/typeorm'
+import { User } from '../entities/User.entity'
+import { verified } from '../utils/bcrypt_handler'
+import {
+  generateToken,
+  generateRereshToken,
+  verifyRefreshToken
+} from '../utils/jwt.handler'
+import { Repository } from 'typeorm'
+import { v4 as uuidv4 } from 'uuid'
+import { APIKey } from '../entities/ApiKey.entity'
+import { LoginUserDTO } from '../dtos/auth/request.dto'
 
-const registerUser = async ({ email, password, name }: User) => {
+const apiKeyRepo: Repository<APIKey> = AppDataSource.getRepository(APIKey)
+const userRepo: Repository<User> = AppDataSource.getRepository(User)
+
+const loginUser = async (loginData: LoginUserDTO) => {
   try {
-    // Check if the email already exists
-    const { data: existingUser, error: emailCheckError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .maybeSingle()
-
-    if (emailCheckError) {
-      console.log('INVALID EMAIL', emailCheckError)
-      const error = new Error('INVALID_EMAIL')
-      ;(error as any).status = 422
-      throw error
-    }
-
-    if (existingUser) {
-      console.log('USER ALREADY EXISTS', existingUser)
-      const error = new Error('USER_ALREADY_EXISTS')
-      ;(error as any).status = 409
-      throw error
-    }
-
-    //Assign user role by default
-    const role = 'user'
-    const passHash = await encrypt(password)
-    const { data: newUser, error } = await supabase
-      .from('users')
-      .insert({ email, password: passHash, name, role })
-      .select()
-
-    if (error || !newUser) {
-      console.log('INSERTION_ERROR', error)
-      throw new Error('INSERTION_ERROR')
-    }
-
-    const parsedUser = JSON.parse(JSON.stringify(newUser))
-
-    //Generate jsonwebtoken
-    const token = await generateToken(parsedUser.email)
-    const refreshToken = await generateRereshToken(parsedUser.email)
-
-    const returnData = {
-      token,
-      refreshToken,
-      message: 'Sign up success'
-    }
-
-    return returnData
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error
-    } else {
-      console.log('UNKNOWN_ERROR', error)
-      throw new Error('UNKNOWN_ERROR')
-    }
-  }
-}
-
-const loginUser = async ({ email, password }: Auth) => {
-  try {
-    const { data: existingUser, error: emailCheckError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single()
-
-    if (!existingUser || existingUser.length === 0) {
+    // Find user by email
+    const existingUser = await userRepo.findOne({
+      where: { email: loginData.email }
+    })
+    if (!existingUser) {
       throw new Error('USER_NOT_FOUND')
     }
 
-    if (emailCheckError) {
-      throw new Error('INVALID_EMAIL')
-    }
-
-    const parsedUser = JSON.parse(JSON.stringify(existingUser))
-    const passwordHash = parsedUser.password
-
-    //Check if the passwords match
-    const isCorrect = await verified(password, passwordHash)
+    // Check if passwords match
+    const isCorrect = await verified(loginData.password, existingUser.password)
     if (!isCorrect) {
       throw new Error('INCORRECT_PASSWORD')
     }
 
-    //Generate jsonwebtoken
-    const token = await generateToken(parsedUser.email)
-    const refreshToken = await generateRereshToken(parsedUser.email)
+    // Generate JWT tokens
+    const token = await generateToken(existingUser.email)
+    const refreshToken = await generateRereshToken(existingUser.email)
 
-    const data = {
+    return {
       token,
       refreshToken,
       message: 'Sign in success'
     }
-
-    return data
   } catch (error) {
-    if (error instanceof Error) {
-      throw error
-    } else {
-      throw new Error('UNKNOWN_ERROR')
-    }
+    throw error instanceof Error ? error : new Error('UNKNOWN_ERROR')
   }
 }
 
-export { registerUser, loginUser }
+const createApiKey = async (userId: number): Promise<APIKey> => {
+  const user = await userRepo.findOne({ where: { id: userId } })
+  if (!user) {
+    throw new Error('USER_NOT_FOUND')
+  }
+
+  const newApiKey = new APIKey()
+  newApiKey.key = uuidv4()
+  newApiKey.user = user
+
+  // Save the API key to the database
+  await apiKeyRepo.save(newApiKey)
+
+  return newApiKey
+}
+
+const refreshToken = async (refreshToken: string) => {
+  const isValid = verifyRefreshToken(refreshToken)
+  if (!isValid) {
+    throw new Error('Invalid refresh token')
+  }
+
+  const { email } = isValid as { email: string }
+
+  const newAccessToken = await generateToken(email)
+
+  return newAccessToken
+}
+
+const validateApiKey = async (apiKey: string): Promise<APIKey | null> => {
+  try {
+    const apiKeyRecord = await apiKeyRepo.findOne({ where: { key: apiKey } })
+
+    if (!apiKeyRecord) {
+      return null
+    }
+
+    return apiKeyRecord
+  } catch (error) {
+    console.log(error)
+    throw new Error('Error validating API Key')
+  }
+}
+
+export { loginUser, createApiKey, validateApiKey, refreshToken }

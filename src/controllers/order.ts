@@ -3,235 +3,209 @@ import {
   insertOrder,
   getOrders,
   getOrderById,
-  updateOrder,
   deleteOrder,
-  getReports,
-  getStatistics
+  updateOrder,
+  getSalesByPeriod
 } from '../services/order'
 import { handleHttp } from '../utils/error_handler'
-import { Order } from '../interfaces/order.interface'
-import {
-  validateOrder,
-  validateUpdateOrder
-} from '../utils/validations/order_validator_handler'
+import { plainToInstance } from 'class-transformer'
+import { validate } from 'class-validator'
+import { InsertOrderDTO, UpdateOrderDTO } from '../dtos/order/request.dto'
 
 const addItems = async (req: Request, res: Response) => {
   try {
-    const body: Order = req.body
+    const orderData = plainToInstance(InsertOrderDTO, req.body)
 
-    const { error } = validateOrder(body)
-    if (error) {
-      return handleHttp(res, error.details[0].message, 400)
+    // Validate the order data
+    const errors = await validate(orderData)
+
+    // If validation errors exist, return a bad request response with error details
+    if (errors.length > 0) {
+      return res.status(400).json({
+        message: 'Validation failed',
+        errors: errors.map((error) => ({
+          property: error.property,
+          constraints: error.constraints
+        }))
+      })
     }
-
-    const responseItem = await insertOrder(body)
+    const responseItem = await insertOrder(req.body)
     res.status(201).json(responseItem)
-  } catch (e: any) {
-    switch (e.message) {
-      case 'ORDER_INSERT_ERROR':
-        return handleHttp(res, 'Failed to insert order data', 500)
-      case 'ORDER_RETRIEVE_ERROR':
-        return handleHttp(res, 'Failed to retrieve order information', 500)
-      case 'MEAL_FETCH_ERROR':
-        return handleHttp(res, 'Meal not found', 404)
-      case 'ORDER_ITEM_INSERT_ERROR':
-        return handleHttp(res, 'Failed to insert order item', 500)
-      case 'ORDER_ITEM_DETAILS_INSERT_ERROR':
-        return handleHttp(res, 'Failed to insert order item details', 500)
-      case 'ORDER_TOTAL_UPDATE_ERROR':
-        return handleHttp(res, 'Failed to update order total price', 500)
-      case 'PAYMENTS_INSERT_ERROR':
-        return handleHttp(res, 'Failed to process payments', 500)
-      default:
-        return handleHttp(res, 'An unexpected error occurred', 500)
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      const errorMap: Record<string, number> = {
+        ORDER_INSERT_ERROR: 500,
+        ORDER_RETRIEVE_ERROR: 500,
+        MEAL_FETCH_ERROR: 404,
+        ORDER_ITEM_INSERT_ERROR: 500,
+        ORDER_ITEM_DETAILS_INSERT_ERROR: 500,
+        ORDER_TOTAL_UPDATE_ERROR: 500,
+        PAYMENTS_INSERT_ERROR: 500,
+        UNKNOWN_ERROR: 500
+      }
+
+      const statusCode = errorMap[error.message] || 500
+      return handleHttp(res, error.message, statusCode, error)
     }
+
+    handleHttp(res, 'Internal Server Error', 500, error)
   }
 }
 
 const getItems = async (req: Request, res: Response) => {
   try {
-    const items = await getOrders()
-
-    return res.status(200).json(items)
-  } catch (error) {
+    const orders = await getOrders()
+    res.status(200).json(orders)
+  } catch (error: unknown) {
     if (error instanceof Error) {
-      switch (error.message) {
-        case 'FAILED_TO_FETCH_ORDERS':
-          return handleHttp(res, 'FAILED_TO_FETCH_ORDERS', 500)
-        case 'NO_ORDER_FOUND':
-          return handleHttp(res, 'NO_ORDER_FOUND', 404)
-        case 'FAILED_TO_FETCH_MEALS':
-          return handleHttp(res, 'FAILED_TO_FETCH_MEALS', 500)
-        case 'FAILED_TO_FETCH_ORDER_ITEM_DETAILS':
-          return handleHttp(res, 'FAILED_TO_FETCH_ORDER_ITEM_DETAILS', 500)
-        case 'UNKNOWN_ERROR':
-          return handleHttp(res, 'UNKNOWN_ERROR', 500)
-        default:
-          return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
+      const errorMap: Record<string, number> = {
+        FAILED_TO_FETCH_ORDERS: 500,
+        NO_ORDER_FOUND: 404,
+        FAILED_TO_FETCH_MEALS: 500,
+        FAILED_TO_FETCH_ORDER_ITEM_DETAILS: 500,
+        UNKNOWN_ERROR: 500
       }
-    } else {
-      return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
+
+      const statusCode = errorMap[error.message] || 500
+      return handleHttp(res, error.message, statusCode, error)
     }
+
+    handleHttp(res, 'Internal Server Error', 500, error)
   }
 }
 
 const getItem = async (req: Request, res: Response) => {
   try {
-    const itemId = req.params.id
-    const item = await getOrderById(itemId)
+    const orderId = req.params.id
 
-    if (!item) {
-      return handleHttp(res, 'ITEM_NOT_FOUND', 404)
-    }
+    const order = await getOrderById(orderId)
 
-    res.status(200).json(item)
-  } catch (error) {
+    res.status(200).json(order)
+  } catch (error: unknown) {
     if (error instanceof Error) {
-      switch (error.message) {
-        case 'FAILED_TO_FETCH_ORDER':
-          return handleHttp(res, 'FAILED_TO_FETCH_ORDER', 500)
-        case 'ORDER_NOT_FOUND':
-          return handleHttp(res, 'ORDER_NOT_FOUND', 404)
-        case 'FAILED_TO_FETCH_MEALS':
-          return handleHttp(res, 'FAILED_TO_FETCH_MEALS', 500)
-        case 'FAILED_TO_FETCH_ORDER_ITEM_DETAILS':
-          return handleHttp(res, 'FAILED_TO_FETCH_ORDER_ITEM_DETAILS', 500)
-        case 'UNKNOWN_ERROR':
-          return handleHttp(res, 'UNKNOWN_ERROR', 500)
-        default:
-          return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
+      const errorMap: Record<string, number> = {
+        ORDER_NOT_FOUND: 404,
+        FAILED_TO_FETCH_ORDER: 500,
+        FAILED_TO_FETCH_MEALS: 500,
+        FAILED_TO_FETCH_ORDER_ITEM_DETAILS: 500,
+        UNKNOWN_ERROR: 500
       }
+
+      const statusCode = errorMap[error.message] || 500
+      return handleHttp(res, error.message, statusCode, error)
     }
+
+    handleHttp(res, 'Internal Server Error', 500, error)
   }
 }
 
-const changeItems = async (req: Request, res: Response) => {
+const updateItems = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params
-    const order = req.body
+    const orderId = Number(req.params.id) // Convert to number
+    const orderData = req.body
 
-    // Validate the incoming order data
-    const { error } = validateUpdateOrder(order)
-    if (error) {
-      return handleHttp(res, error.details[0].message, 400)
+    if (isNaN(orderId)) {
+      return handleHttp(res, 'Invalid order ID format.', 400)
     }
 
-    // Attempt to update the order
-    const updatedOrder = await updateOrder(id, order)
+    // Transform the incoming request data to an instance of UpdateOrderDTO
+    const updateData = plainToInstance(UpdateOrderDTO, orderData)
 
-    // If successful, return the updated order
-    return res.status(200).json(updatedOrder)
-  } catch (err: unknown) {
-    if (err instanceof Error) {
-      switch (err.message) {
-        case 'FAILED_TO_FETCH_ORDER':
-          return handleHttp(res, 'Order could not be fetched', 500)
-        case 'ORDER_NOT_FOUND':
-          return handleHttp(res, 'Order not found', 404)
-        case 'FAILED_TO_UPDATE_ORDER':
-          return handleHttp(res, 'Failed to update order', 500)
-        case 'FAILED_TO_UPDATE_ORDER_ITEM':
-          return handleHttp(res, 'Failed to update order item', 500)
-        case 'FAILED_TO_INSERT_ORDER_ITEM':
-          return handleHttp(res, 'Failed to insert new order item', 500)
-        case 'FAILED_TO_INSERT_DETAIL':
-          return handleHttp(res, 'Failed to insert order item details', 500)
-        case 'FAILED_TO_FETCH_MEAL_PRICE':
-          return handleHttp(res, 'Error fetching meal price', 500)
-        case 'FAILED_TO_UPDATE_PAYMENT':
-          return handleHttp(res, 'Failed to update payment', 500)
-        case 'INSUFFICIENT_PAYMENT_ERROR':
-          return handleHttp(res, 'Insufficient payment', 400)
-        case 'FAILED_TO_INSERT_PAYMENT':
-          return handleHttp(res, 'Failed to insert payment', 500)
-        default:
-          return handleHttp(res, 'Internal server error', 500)
+    // Validate the request data
+    const errors = await validate(updateData)
+
+    // If validation errors exist, return a 400 response with error details
+    if (errors.length > 0) {
+      return res.status(400).json({
+        message: 'Validation failed',
+        errors: errors.map((error) => ({
+          property: error.property,
+          constraints: error.constraints
+        }))
+      })
+    }
+
+    const responseItem = await updateOrder(orderId, orderData)
+
+    res.status(200).json(responseItem)
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      const errorMap: Record<string, number> = {
+        ORDER_NOT_FOUND: 404,
+        ORDER_INSERT_ERROR: 500,
+        ORDER_RETRIEVE_ERROR: 500,
+        MEAL_FETCH_ERROR: 404,
+        ORDER_ITEM_INSERT_ERROR: 500,
+        ORDER_ITEM_DETAILS_INSERT_ERROR: 500,
+        ORDER_TOTAL_UPDATE_ERROR: 500,
+        PAYMENTS_INSERT_ERROR: 500,
+        UNKNOWN_ERROR: 500
       }
+
+      const statusCode = errorMap[error.message] || 500
+      return handleHttp(res, error.message, statusCode, error)
     }
-    return handleHttp(res, 'An unexpected error occurred', 500)
+
+    handleHttp(res, 'Internal Server Error', 500, error)
   }
 }
 
 const removeItems = async (req: Request, res: Response) => {
   try {
-    const itemId = req.params.id
+    const orderId = Number(req.params.id)
 
-    const { success, message, error } = await deleteOrder(itemId)
-
-    if (!success) {
-      switch (error) {
-        case 'ITEM_NOT_FOUND':
-          return handleHttp(res, 'Item not found.', 404)
-        case 'DELETE_ERROR':
-          return handleHttp(res, 'Failed to delete item.', 500)
-        case 'FETCH_ERROR':
-          return handleHttp(res, 'Failed to check item existence.', 500)
-        default:
-          return handleHttp(res, 'Internal server error.', 500)
-      }
+    if (isNaN(orderId)) {
+      return handleHttp(res, 'Invalid order ID format.', 400)
     }
 
-    res.status(200).json(message)
-  } catch (e) {
-    console.error('Unexpected error in removeItems:', e)
-    handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
+    await deleteOrder(orderId)
+    res
+      .status(200)
+      .json({ success: true, message: 'Order deleted successfully.' })
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      const errorMap: Record<string, number> = {
+        ORDER_NOT_FOUND: 404,
+        DELETE_ERROR: 500
+      }
+
+      const statusCode = errorMap[error.message] || 500
+      return handleHttp(res, error.message, statusCode, error)
+    }
+
+    // Handles unexpected errors
+    handleHttp(res, 'Internal Server Error', 500, error)
   }
 }
 
 const getReportItems = async (req: Request, res: Response) => {
   try {
+    // Obtener el parámetro period de la query string (con valor por defecto 'day')
     const period = (req.query.period as 'day' | 'week' | 'month') || 'day'
-    // Get statistics from the service
-    const reportsData = await getReports(period)
+
+    // Llamar a la función getSalesByPeriod pasando el period
+    const reportsData = await getSalesByPeriod(period)
+
+    // Devolver los datos con la respuesta
     res.status(200).json(reportsData)
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error) {
-      // Handle errors based on their message
-      switch (error.message) {
-        case 'FAILED_TO_FETCH_STATICS':
-          return handleHttp(res, 'FAILED_TO_FETCH_STATICS', 500) // Custom error for failed statics
-        case 'UNKNOWN_ERROR':
-          return handleHttp(res, 'UNKNOWN_ERROR', 500)
-        default:
-          return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
+      // Mapear mensajes de error específicos a códigos de estado
+      const errorMap: Record<string, number> = {
+        FAILED_TO_FETCH_SALES: 500,
+        UNKNOWN_ERROR: 500
       }
+
+      // Obtener el código de estado correspondiente, por defecto 500
+      const statusCode = errorMap[error.message] || 500
+
+      // Enviar la respuesta de error utilizando handleHttp
+      return handleHttp(res, error.message, statusCode, error)
     }
+
+    // Manejar errores inesperados
+    handleHttp(res, 'Internal Server Error', 500, error)
   }
 }
 
-const getStaticsItems = async (req: Request, res: Response) => {
-  try {
-    const stats = await getStatistics()
-    res.status(200).json(stats)
-  } catch (error) {
-    console.error('Error in getStaticsItems controller:', error) // Log error in controller
-    if (error instanceof Error) {
-      switch (error.message) {
-        case 'FAILED_TO_FETCH_TOP_SELLERS':
-          return handleHttp(res, 'Failed to fetch top sellers', 500)
-        case 'FAILED_TO_FETCH_SALES_BY_PERIOD':
-          return handleHttp(res, 'Failed to fetch sales by period', 500)
-        case 'FAILED_TO_FETCH_AVERAGE_QUANTITY':
-          return handleHttp(res, 'Failed to fetch average quantity', 500)
-        case 'FAILED_TO_FETCH_TOTAL_SALES_PER_PRODUCT':
-          return handleHttp(res, 'Failed to fetch total sales per product', 500)
-        case 'FAILED_TO_FETCH_ALL_SALES_DATA':
-          return handleHttp(res, 'Failed to fetch all sales data', 500)
-        default:
-          return handleHttp(res, 'INTERNAL_SERVER_ERROR', 500)
-      }
-    } else {
-      return handleHttp(res, 'UNKNOWN_ERROR', 500)
-    }
-  }
-}
-
-export {
-  addItems,
-  getItems,
-  getItem,
-  changeItems,
-  removeItems,
-  getReportItems,
-  getStaticsItems
-}
+export { addItems, getItems, getItem, removeItems, updateItems, getReportItems }

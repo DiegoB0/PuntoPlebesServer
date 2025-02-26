@@ -6,6 +6,7 @@ import {
   CreateDateColumn
 } from 'typeorm'
 import { Meal } from './Meals.entity'
+import { Menu } from './enums/Menu.enum'
 
 @Entity('categories')
 export class Category {
@@ -15,7 +16,10 @@ export class Category {
   @Column()
   category_name: string
 
-  @Column()
+  @Column({
+    type: 'enum',
+    enum: Menu
+  })
   menu_type: string
 
   @CreateDateColumn()

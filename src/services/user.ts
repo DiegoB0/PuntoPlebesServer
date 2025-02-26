@@ -1,157 +1,101 @@
-import { User } from '../interfaces/user.interface'
-import supabase from '../config/supabase'
+import { AppDataSource } from '../config/typeorm'
+import { User } from '../entities/User.entity'
+import { Repository } from 'typeorm'
 import { encrypt } from '../utils/bcrypt_handler'
+import { Role } from '../entities/enums/Role.enum'
 
-const insertUser = async ({ email, password, name, role }: User) => {
+const userRepo: Repository<User> = AppDataSource.getRepository(User)
+
+const insertUser = async ({ email, password, name, role }: Partial<User>) => {
   try {
-    // Check if the email already exists
-    const { data: existingUser, error: emailCheckError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .maybeSingle()
-
-    if (emailCheckError) {
-      throw new Error('FAILED_EMAIL_CHECK')
+    if (!password) {
+      throw new Error('PASSWORD_REQUIRED')
     }
+    const existingUser = await userRepo.findOne({ where: { email } })
 
     if (existingUser) {
       throw new Error('EMAIL_ALREADY_EXISTS')
     }
 
-    //Encrypt the password
     const passHash = await encrypt(password)
 
-    // Proceed to insert the new user
-    const { data, error } = await supabase
-      .from('users')
-      .insert({ email, password: passHash, name, role })
-      .select('*')
+    const user = userRepo.create({
+      email,
+      password: passHash,
+      name,
+      role: role || Role.Cashier
+    })
 
-    if (error) {
-      throw new Error('FAILED_TO_INSERT_USER')
-    }
-
-    if (!data || data.length === 0) {
-      throw new Error('FAILED_TO_FETCH_USER')
-    }
+    // Insert the new user
+    await userRepo.save(user)
 
     return { message: 'User inserted successfully' }
   } catch (error) {
-    if (error instanceof Error) {
-      throw error
-    } else {
-      throw new Error('UNKNOWN_ERROR')
-    }
+    throw error instanceof Error ? error : new Error('UNKNOWN_ERROR')
   }
 }
 
 const getUsers = async () => {
   try {
-    const { data, error } = await supabase.from('users').select('*')
+    const users = await userRepo.find()
 
-    if (error) {
-      throw new Error('FAILED_TO_FETCH_USERS')
-    }
-
-    if (!data || data.length === 0) {
+    if (!users.length) {
       throw new Error('NO_USERS_FOUND')
     }
 
-    return data
+    return users
   } catch (error) {
-    if (error instanceof Error) {
-      throw error
-    } else {
-      throw new Error('UNKNOWN_ERROR')
-    }
+    throw error instanceof Error ? error : new Error('UNKNOWN_ERROR')
   }
 }
 
-const getUserById = async (id: string) => {
+const getUserById = async (id: number) => {
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', id)
-      .single()
+    const user = await userRepo.findOne({
+      where: { id },
+      relations: ['apiKeys']
+    })
 
-    if (error) {
-      throw new Error('FAILED_TO_FETCH_USER')
-    }
-
-    if (!data || data.length === 0) {
+    if (!user) {
       throw new Error('NO_USER_FOUND')
     }
 
-    return data
+    return user
   } catch (error) {
-    if (error instanceof Error) {
-      throw error
-    } else {
-      throw new Error('UNKNOWN_ERROR')
-    }
+    throw error instanceof Error ? error : new Error('UNKNOWN_ERROR')
   }
 }
 
-const updateUser = async (id: string, user: Partial<User>) => {
+const updateUser = async (id: number, user: Partial<User>) => {
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .update(user)
-      .eq('id', id)
-      .select()
+    const existingUser = await userRepo.findOne({ where: { id } })
 
-    if (error) {
-      throw new Error('UPDATE_ERROR')
-    }
-
-    if (!data || data.length === 0) {
+    if (!existingUser) {
       throw new Error('USER_NOT_FOUND')
     }
 
+    await userRepo.update(id, user)
+
     return { message: 'User updated successfully' }
   } catch (error) {
-    if (error instanceof Error) {
-      throw error
-    } else {
-      throw new Error('UNKNOWN_ERROR')
-    }
+    throw error instanceof Error ? error : new Error('UNKNOWN_ERROR')
   }
 }
 
-const deleteUser = async (id: string) => {
+const deleteUser = async (id: number) => {
   try {
-    // Check if user exists
-    const { data: existingUser, error: fetchError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', id)
+    const existingUser = await userRepo.findOne({ where: { id } })
 
-    if (fetchError) {
-      throw new Error('FETCH_ERROR')
+    if (!existingUser) {
+      throw new Error('USER_NOT_FOUND')
     }
 
-    if (!existingUser || existingUser.length === 0) {
-      throw new Error('ITEM_NOT_FOUND')
-    }
-
-    const { error: deleteError } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', id)
-
-    if (deleteError) {
-      throw new Error('DELETE_ERROR')
-    }
+    // Delete the user
+    await userRepo.remove(existingUser)
 
     return { message: 'User deleted successfully' }
   } catch (error) {
-    if (error instanceof Error) {
-      throw error
-    } else {
-      throw new Error('UNKNOWN_ERROR')
-    }
+    throw error instanceof Error ? error : new Error('UNKNOWN_ERROR')
   }
 }
 

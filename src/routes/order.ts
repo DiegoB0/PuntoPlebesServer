@@ -3,19 +3,18 @@ import {
   addItems,
   getItems,
   getItem,
-  changeItems,
   removeItems,
-  getReportItems,
-  getStaticsItems
+  updateItems,
+  getReportItems
 } from '../controllers/order'
 
 const router = express.Router()
 
 // Route to get the data for the statics
-router.get('/reports', getReportItems)
+router.get('/reportes', getReportItems)
 
-// Route to get the data for the reosts
-router.get('/statics', getStaticsItems)
+// // Route to get the data for the reosts
+// router.get('/statics', getStaticsItems)
 
 // Route to create a new order along with items and item details
 router.post('/', addItems)
@@ -27,7 +26,7 @@ router.get('/', getItems)
 router.get('/:id', getItem)
 
 // Route to update an order along with its items and item details
-router.put('/:id', changeItems)
+router.put('/:id', updateItems)
 
 // Route to delete an order along with its related items and item details
 router.delete('/:id', removeItems)

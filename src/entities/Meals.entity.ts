@@ -5,10 +5,12 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
-  OneToMany
+  OneToMany,
+  OneToOne
 } from 'typeorm'
 import { Category } from './Categories.entity'
 import { OrderItem } from './OrderItems.entity'
+import { Clave } from './Claves.entity'
 
 @Entity('meals')
 export class Meal {
@@ -31,10 +33,21 @@ export class Meal {
   @OneToMany(() => OrderItem, (orderItem) => orderItem.meal)
   orderItems: OrderItem[]
 
-  @Column()
+  @Column({ default: false })
+  isClaveApplied: boolean
+
+  @OneToOne(() => Clave, (clave) => clave.meal, {
+    nullable: true,
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
+  })
+  @JoinColumn({ name: 'clave_id' })
+  clave: Clave
+
+  @Column({ nullable: true })
   image_id: number
 
-  @Column()
+  @Column({ nullable: true })
   image_url: string
 
   @CreateDateColumn()

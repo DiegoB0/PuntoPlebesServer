@@ -1,150 +1,147 @@
-import { Category } from '../interfaces/category.interface'
-import supabase from '../config/supabase'
+import { AppDataSource } from '../config/typeorm'
+import { Category } from '../entities/Categories.entity'
+import { Repository } from 'typeorm'
+import { Menu } from '../entities/enums/Menu.enum'
 
-const createCategoryService = async (categoryData: Category) => {
+const categoryRepo: Repository<Category> = AppDataSource.getRepository(Category)
+
+const insertCategory = async (categoryData: Category) => {
   try {
-    const { data, error } = await supabase
-      .from('categories')
-      .insert([categoryData])
+    if (!Object.values(Menu).includes(categoryData.menu_type as Menu)) {
+      throw new Error('INVALID_MENU_TYPE')
+    }
+    // Create a new category instance
+    const category = categoryRepo.create(categoryData)
 
-    if (error) {
+    // Save the new category to the database
+    const savedCategory = await categoryRepo.save(category)
+
+    if (!savedCategory) {
+      throw new Error('NO_ITEM_FOUND')
+    }
+
+    return savedCategory
+  } catch (error: unknown) {
+    if (error instanceof Error) {
       console.error('Error creating category:', error.message)
-      throw new Error('CREATE_CATEGORY_ERROR')
-    }
-
-    if (!data) {
-      throw new Error('NO_ITEM_FOUND')
-    }
-
-    return data
-  } catch (error) {
-    if (error instanceof Error) {
       throw error
     } else {
+      console.error('Unknown error:', error)
       throw new Error('UNKNOWN_ERROR')
     }
   }
 }
 
-const getAllCategoriesService = async () => {
+const getCategories = async () => {
   try {
-    const { data, error } = await supabase.from('categories').select('*')
+    // Fetch all categories from the database
+    const categories = await categoryRepo.find()
 
-    if (error) {
+    if (!categories || categories.length === 0) {
+      throw new Error('NO_ITEM_FOUND')
+    }
+
+    return categories
+  } catch (error: unknown) {
+    if (error instanceof Error) {
       console.error('Error fetching categories:', error.message)
-      throw new Error('FETCH_CATEGORIES_ERROR')
-    }
-
-    if (!data || data.length === 0) {
-      throw new Error('NO_ITEM_FOUND')
-    }
-
-    return data
-  } catch (error) {
-    if (error instanceof Error) {
       throw error
     } else {
+      console.error('Unknown error:', error)
       throw new Error('UNKNOWN_ERROR')
     }
   }
 }
 
-const getCategoryService = async (id: number) => {
+const getCategory = async (id: number) => {
   try {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('id', id)
-      .single()
+    // Fetch the category by ID from the database
+    const category = await categoryRepo.findOne({
+      where: { id }
+    })
 
-    if (error) {
+    if (!category) {
+      throw new Error('CATEGORY_NOT_FOUND')
+    }
+
+    return category
+  } catch (error: unknown) {
+    if (error instanceof Error) {
       console.error('Error fetching category:', error.message)
-      throw new Error('FETCH_CATEGORY_ERROR')
-    }
-
-    if (!data) {
-      throw new Error('CATEGORY_NOT_FOUND')
-    }
-
-    return data
-  } catch (error) {
-    if (error instanceof Error) {
       throw error
     } else {
+      console.error('Unknown error:', error)
       throw new Error('UNKNOWN_ERROR')
     }
   }
 }
 
-const updateCategoryService = async (id: number, categoryData: Category) => {
+const updateCategory = async (id: number, categoryData: Category) => {
   try {
-    const { data, error } = await supabase
-      .from('categories')
-      .update(categoryData)
-      .eq('id', id)
-      .select()
+    // Find the category by ID
+    const category = await categoryRepo.findOne({
+      where: { id }
+    })
 
-    if (error) {
-      console.error('Error updating category:', error.message)
-      throw new Error('UPDATE_CATEGORY_ERROR')
-    }
-
-    if (!data || data.length === 0) {
+    if (!category) {
       throw new Error('CATEGORY_NOT_FOUND')
     }
+
+    // Update the category data
+    await categoryRepo.update(id, categoryData)
+
+    // Fetch the updated category
+    const updatedCategory = await categoryRepo.findOne({
+      where: { id }
+    })
 
     const responseData = {
-      data,
+      data: updatedCategory,
       message: 'Category updated successfully'
     }
 
     return responseData
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error) {
+      console.error('Error updating category:', error.message)
       throw error
     } else {
+      console.error('Unknown error:', error)
       throw new Error('UNKNOWN_ERROR')
     }
   }
 }
 
-const deleteCategoryService = async (id: string) => {
+const deleteCategory = async (id: number) => {
   try {
-    const { data: existingCategory, error: fetchError } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('id', id)
+    // Find the category by ID
+    const category = await categoryRepo.findOne({
+      where: { id }
+    })
 
-    if (fetchError) {
-      console.error('Error fetching category:', fetchError.message)
-      throw new Error('FETCH_ERROR')
-    }
-
-    if (!existingCategory || existingCategory.length === 0) {
+    if (!category) {
       throw new Error('CATEGORY_NOT_FOUND')
     }
 
-    const { error } = await supabase.from('categories').delete().eq('id', id)
-
-    if (error) {
-      console.error('Error deleting category:', error.message)
-      throw new Error('DELETE_CATEGORY_ERROR')
-    }
+    // Delete the category
+    await categoryRepo.delete(id)
 
     return true // Return true if deletion was successful
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error) {
+      console.error('Error deleting category:', error.message)
       throw error
     } else {
+      console.error('Unknown error:', error)
       throw new Error('UNKNOWN_ERROR')
     }
   }
 }
 
 export {
-  createCategoryService,
-  getAllCategoriesService,
-  getCategoryService,
-  updateCategoryService,
-  deleteCategoryService
+  insertCategory,
+  getCategories,
+  getCategory,
+  updateCategory,
+  deleteCategory
 }

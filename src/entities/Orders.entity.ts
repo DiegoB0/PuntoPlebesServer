@@ -7,6 +7,7 @@ import {
 } from 'typeorm'
 import { OrderItem } from './OrderItems.entity'
 import { Payment } from './Payments.entity'
+import { OrderStatus } from './enums/OrderStatus.enum'
 
 @Entity('orders')
 export class Order {
@@ -16,7 +17,10 @@ export class Order {
   @Column()
   order_number: number
 
-  @Column()
+  @Column({
+    type: 'enum',
+    enum: OrderStatus
+  })
   order_status: string
 
   @Column()
@@ -26,7 +30,7 @@ export class Order {
   client_phone: string
 
   @Column()
-  total_price_numeric: number
+  total_price: number
 
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order)
   orderItems: OrderItem[]

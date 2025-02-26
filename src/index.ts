@@ -4,6 +4,8 @@ import morgan from 'morgan'
 import { router } from './routes'
 import express, { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from './config/typeorm'
+import swaggerSpec from './swagger'
+import swaggerUI from 'swagger-ui-express'
 
 // Inicializar la aplicación de Express
 const app = express()
@@ -18,6 +20,11 @@ const corsOptions =
 app.use(cors(corsOptions))
 app.use(express.json())
 app.use(morgan('dev'))
+
+// Serve swagger
+if (process.env.NODE_ENV === 'dev') {
+  app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec))
+}
 
 // Routes
 app.use(router)

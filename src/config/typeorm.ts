@@ -12,9 +12,9 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   ssl: {
-    rejectUnauthorized: false // Required for Supabase
+    rejectUnauthorized: false
   },
-  synchronize: true, // Auto-creates tables (only for dev)
-  logging: true,
-  entities: ['src/entities/*.ts'] // Adjust path as needed
+  synchronize: true,
+  logging: ['error', 'schema'],
+  entities: ['src/entities/*.ts']
 })

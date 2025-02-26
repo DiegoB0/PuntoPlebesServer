@@ -1,21 +1,28 @@
 import { Request, Response } from 'express'
 import {
-  createMealService,
-  getAllMealsService,
-  getMealService,
-  updateMealService,
-  deleteMealService
+  insertMeal,
+  getMeals,
+  getMeal,
+  updateMeal,
+  deleteMeal
 } from '../services/meal'
 import { handleHttp } from '../utils/error_handler'
 import { uploadImage } from '../utils/cloudinary'
 import fs from 'fs-extra'
-import {
-  validateMeal,
-  validateMealUpdate
-} from '../utils/validations/meal_validator_handler'
+import { InsertMealDTO, UpdateMealDTO } from '../dtos/meal/request.dto'
+import { plainToInstance } from 'class-transformer'
+import { validate } from 'class-validator'
 
-const createMealController = async (req: Request, res: Response) => {
+const addItems = async (req: Request, res: Response) => {
   try {
+    let mealData = plainToInstance(InsertMealDTO, req.body)
+
+    // Validate DTO
+    const errors = await validate(mealData)
+    if (errors.length > 0) {
+      return res.status(400).json({ errors })
+    }
+
     let image_id = ''
     let image_url = ''
 
@@ -25,149 +32,141 @@ const createMealController = async (req: Request, res: Response) => {
         const result = await uploadImage(req.files.image.tempFilePath)
         image_id = result.public_id
         image_url = result.secure_url
+
+        // Extend mealData properly while keeping validation
+        mealData = Object.assign(mealData, { image_id, image_url })
+
         await fs.unlink(req.files.image.tempFilePath)
       } else {
         return handleHttp(res, 'Multiple images are not supported', 400)
       }
     }
 
-    const mealData = {
-      ...req.body,
-      ...(image_id && image_url && { image_id, image_url })
-    }
-
-    const { error } = validateMeal(mealData)
-    if (error) {
-      return handleHttp(res, error.details[0].message, 400)
-    }
-
-    const newMeal = await createMealService(mealData)
+    const newMeal = await insertMeal(mealData)
     res.status(201).json(newMeal)
-  } catch (err: any) {
-    switch (err.message) {
-      case 'ERROR_INSERT_MEAL':
-        return handleHttp(res, 'Error inserting meal', 500)
-      case 'ERROR_FETCH_MEAL':
-        return handleHttp(res, 'Failed to retrieve inserted meal', 500)
-      case 'UNKNOWN_ERROR':
-        return handleHttp(res, 'An unexpected error occurred', 500)
-      default:
-        return handleHttp(res, 'Internal server error', 500)
+  } catch (e: any) {
+    if (e instanceof Error) {
+      const errorMap: Record<string, number> = {
+        CATEGORY_NOT_FOUND: 404,
+        ERROR_INSERT_MEAL: 500,
+        ERROR_FETCH_MEAL: 500,
+        UNKNOWN_ERROR: 500
+      }
+
+      const statusCode = errorMap[e.message] || 500
+      return handleHttp(res, e.message, statusCode, e)
     }
+
+    handleHttp(res, 'Internal Server Error', 500, e)
   }
 }
 
-const getAllMealsController = async (req: Request, res: Response) => {
+const getItems = async (req: Request, res: Response) => {
   try {
-    const meals = await getAllMealsService()
+    const meals = await getMeals()
     res.status(200).json(meals)
-  } catch (err: any) {
-    switch (err.message) {
-      case 'ERROR_FETCH_MEALS':
-        return handleHttp(res, 'Error fetching meals', 500)
-      case 'NO_MEALS_FOUND':
-        return handleHttp(res, 'No meals found', 404)
-      case 'UNKNOWN_ERROR':
-        return handleHttp(res, 'An unexpected error occurred', 500)
-      default:
-        return handleHttp(res, 'Internal server error', 500)
+  } catch (e: any) {
+    if (e instanceof Error) {
+      const errorMap: Record<string, number> = {
+        ERROR_FETCH_MEALS: 500,
+        NO_MEALS_FOUND: 404,
+        UNKNOWN_ERROR: 500
+      }
+
+      const statusCode = errorMap[e.message] || 500
+      return handleHttp(res, e.message, statusCode, e)
     }
+
+    handleHttp(res, 'Internal Server Error', 500, e)
   }
 }
 
-const getMealController = async ({ params }: Request, res: Response) => {
+const getItem = async ({ params }: Request, res: Response) => {
   try {
-    const meal = await getMealService(Number(params.id))
+    const meal = await getMeal(Number(params.id))
     res.status(200).json(meal)
-  } catch (err: any) {
-    switch (err.message) {
-      case 'ERROR_FETCH_MEAL':
-        return handleHttp(res, 'Error fetching meal', 500)
-      case 'MEAL_NOT_FOUND':
-        return handleHttp(res, 'Meal not found', 404)
-      case 'UNKNOWN_ERROR':
-        return handleHttp(res, 'An unexpected error occurred', 500)
-      default:
-        return handleHttp(res, 'Internal server error', 500)
+  } catch (e: any) {
+    if (e instanceof Error) {
+      const errorMap: Record<string, number> = {
+        ERROR_FETCH_MEAL: 500,
+        MEAL_NOT_FOUND: 404,
+        UNKNOWN_ERROR: 500
+      }
+
+      const statusCode = errorMap[e.message] || 500
+      return handleHttp(res, e.message, statusCode, e)
     }
+
+    handleHttp(res, 'Internal Server Error', 500, e)
   }
 }
 
-const updateMealController = async (req: Request, res: Response) => {
+const updateItems = async (req: Request, res: Response) => {
   try {
-    let mealData = req.body
-    const itemId = req.params.id
+    let mealData = plainToInstance(UpdateMealDTO, req.body)
+
+    // Validate DTO
+    const errors = await validate(mealData)
+    if (errors.length > 0) {
+      return res.status(400).json({ errors })
+    }
+
+    const itemId = Number(req.params.id)
 
     // Check if an image is uploaded
     if (req.files?.image) {
-      // Handle single image upload
       if (!Array.isArray(req.files.image)) {
         const result = await uploadImage(req.files.image.tempFilePath)
         const image_id = result.public_id
         const image_url = result.secure_url
 
-        mealData = {
-          ...req.body,
-          ...(image_id && image_url && { image_id, image_url })
-        }
+        // Keep the DTO structure and extend it properly
+        mealData = Object.assign(mealData, { image_id, image_url })
 
         await fs.unlink(req.files.image.tempFilePath)
       } else {
-        return handleHttp(res, 'Multiple images is not supported')
+        return handleHttp(res, 'Multiple images are not supported', 400)
       }
-    } else {
-      console.log('No image uploaded, proceeding without image.')
     }
 
-    const { error } = validateMealUpdate(mealData)
-    if (error) {
-      return handleHttp(res, error.details[0].message, 400)
-    }
-
-    const updatedMeal = await updateMealService(itemId, mealData)
+    const updatedMeal = await updateMeal(itemId, mealData)
     res.status(200).json(updatedMeal)
-  } catch (err: any) {
-    switch (err.message) {
-      case 'FETCH_ERROR':
-        return handleHttp(res, 'Failed to fetch meals', 500)
-      case 'ITEM_NOT_FOUND':
-        return handleHttp(res, 'No meal found', 500)
-      case 'UPDATE_MEAL_ERROR':
-        return handleHttp(res, 'Error updating meal', 500)
-      case 'UNKNOWN_ERROR':
-        return handleHttp(res, 'An unexpected error occur', 500)
-      default:
-        return handleHttp(res, 'Internal server error', 500)
+  } catch (e: any) {
+    if (e instanceof Error) {
+      const errorMap: Record<string, number> = {
+        ITEM_NOT_FOUND: 404,
+        UPDATE_MEAL_ERROR: 500,
+        UNKNOWN_ERROR: 500
+      }
+
+      const statusCode = errorMap[e.message] || 500
+      return handleHttp(res, e.message, statusCode, e)
     }
+
+    handleHttp(res, 'Internal Server Error', 500, e)
   }
 }
 
-const deleteMealController = async (req: Request, res: Response) => {
+const removeItem = async (req: Request, res: Response) => {
   try {
-    const itemId = req.params.id
+    const itemId = Number(req.params.id)
 
-    const { message } = await deleteMealService(itemId)
+    const { message } = await deleteMeal(itemId)
     res.status(200).json(message)
-  } catch (err: any) {
-    switch (err.message) {
-      case 'FETCH_ERROR':
-        return handleHttp(res, 'Failed to fetch meal', 500)
-      case 'ITEM_NOT_FOUND':
-        return handleHttp(res, 'Meal not found', 404)
-      case 'DELETE_MEAL_ERROR':
-        return handleHttp(res, 'Error deleting meal', 500)
-      case 'UNKNOWN_ERROR':
-        return handleHttp(res, 'An unexpected error occurred', 500)
-      default:
-        return handleHttp(res, 'Internal server error', 500)
+  } catch (e: any) {
+    if (e instanceof Error) {
+      const errorMap: Record<string, number> = {
+        ITEM_NOT_FOUND: 404,
+        DELETE_MEAL_ERROR: 500,
+        UNKNOWN_ERROR: 500
+      }
+
+      const statusCode = errorMap[e.message] || 500
+      return handleHttp(res, e.message, statusCode, e)
     }
+
+    handleHttp(res, 'Internal Server Error', 500, e)
   }
 }
 
-export {
-  createMealController,
-  getAllMealsController,
-  getMealController,
-  updateMealController,
-  deleteMealController
-}
+export { addItems, getItems, getItem, updateItems, removeItem }

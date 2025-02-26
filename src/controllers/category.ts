@@ -1,93 +1,119 @@
 import { Request, Response } from 'express'
 import {
-  createCategoryService,
-  getAllCategoriesService,
-  getCategoryService,
-  updateCategoryService,
-  deleteCategoryService
+  insertCategory,
+  getCategories,
+  getCategory,
+  updateCategory,
+  deleteCategory
 } from '../services/category'
 import { handleHttp } from '../utils/error_handler'
+import { plainToInstance } from 'class-transformer'
+import { validate } from 'class-validator'
+import {
+  InsertCategoryDTO,
+  UpdateCategoryDTO
+} from '../dtos/category/request.dto'
 
-const createCategoryController = async ({ body }: Request, res: Response) => {
+const addItems = async ({ body }: Request, res: Response) => {
   try {
-    const newCategory = await createCategoryService(body)
-    res.status(201).json(newCategory)
-  } catch (e: any) {
-    switch (e.message) {
-      case 'CREATE_CATEGORY_ERROR':
-        return handleHttp(res, 'Error creating category', 500)
-      case 'NO_ITEM_FOUND':
-        return handleHttp(res, 'No category found', 404)
-      case 'UNKNOWN_ERROR':
-        return handleHttp(res, 'An unexpected error occurred', 500)
-      default:
-        return handleHttp(res, 'Internal server error', 500)
+    const newCategory = plainToInstance(InsertCategoryDTO, body)
+
+    // Validate the data
+    const errors = await validate(newCategory)
+    if (errors.length > 0) {
+      return res.status(400).json({ errors })
     }
+
+    const createdCategory = await insertCategory(body)
+    res.status(201).json(createdCategory)
+  } catch (e: any) {
+    if (e instanceof Error) {
+      const errorMap: Record<string, number> = {
+        CREATE_CATEGORY_ERROR: 500,
+        NO_ITEM_FOUND: 404,
+        UNKNOWN_ERROR: 500
+      }
+
+      const statusCode = errorMap[e.message] || 500
+      return handleHttp(res, e.message, statusCode, e)
+    }
+
+    handleHttp(res, 'Internal Server Error', 500, e)
   }
 }
 
-const getAllCategoriesController = async (req: Request, res: Response) => {
+const getItems = async (req: Request, res: Response) => {
   try {
-    const categories = await getAllCategoriesService()
+    const categories = await getCategories()
     res.status(200).json(categories)
   } catch (err: any) {
-    switch (err.message) {
-      case 'FETCH_CATEGORIES_ERROR':
-        return handleHttp(res, 'Error fetching categories', 500)
-      case 'NO_ITEM_FOUND':
-        return handleHttp(res, 'No categories found', 404)
-      case 'UNKNOWN_ERROR':
-        return handleHttp(res, 'An unexpected error occurred', 500)
-      default:
-        return handleHttp(res, 'Internal server error', 500)
+    if (err instanceof Error) {
+      const errorMap: Record<string, number> = {
+        FETCH_CATEGORIES_ERROR: 500,
+        NO_ITEM_FOUND: 404,
+        UNKNOWN_ERROR: 500
+      }
+
+      const statusCode = errorMap[err.message] || 500
+      return handleHttp(res, err.message, statusCode, err)
     }
+
+    handleHttp(res, 'Internal Server Error', 500, err)
   }
 }
 
-const getCategoryController = async ({ params }: Request, res: Response) => {
+const getItem = async ({ params }: Request, res: Response) => {
   try {
-    const category = await getCategoryService(Number(params.id))
+    const category = await getCategory(Number(params.id))
     res.status(200).json(category)
   } catch (err: any) {
-    switch (err.message) {
-      case 'FETCH_CATEGORY_ERROR':
-        return handleHttp(res, 'Error fetching category', 500)
-      case 'CATEGORY_NOT_FOUND':
-        return handleHttp(res, 'Category not found', 404)
-      case 'UNKNOWN_ERROR':
-        return handleHttp(res, 'An unexpected error occurred', 500)
-      default:
-        return handleHttp(res, 'Internal server error', 500)
+    if (err instanceof Error) {
+      const errorMap: Record<string, number> = {
+        FETCH_CATEGORY_ERROR: 500,
+        CATEGORY_NOT_FOUND: 404,
+        UNKNOWN_ERROR: 500
+      }
+
+      const statusCode = errorMap[err.message] || 500
+      return handleHttp(res, err.message, statusCode, err)
     }
+
+    handleHttp(res, 'Internal Server Error', 500, err)
   }
 }
 
-const updateCategoryController = async (
-  { params, body }: Request,
-  res: Response
-) => {
+const updateItems = async ({ params, body }: Request, res: Response) => {
   try {
-    const updatedCategory = await updateCategoryService(Number(params.id), body)
+    const updatedCategoryData = plainToInstance(UpdateCategoryDTO, body)
 
+    // Validate the data
+    const errors = await validate(updatedCategoryData)
+    if (errors.length > 0) {
+      return res.status(400).json({ errors })
+    }
+
+    const updatedCategory = await updateCategory(Number(params.id), body)
     res.status(200).json(updatedCategory)
   } catch (err: any) {
-    switch (err.message) {
-      case 'UPDATE_CATEGORY_ERROR':
-        return handleHttp(res, 'Error updating category', 500)
-      case 'CATEGORY_NOT_FOUND':
-        return handleHttp(res, 'Category not found', 404)
-      case 'UNKNOWN_ERROR':
-        return handleHttp(res, 'An unexpected error occurred', 500)
-      default:
-        return handleHttp(res, 'Internal server error', 500)
+    if (err instanceof Error) {
+      const errorMap: Record<string, number> = {
+        UPDATE_CATEGORY_ERROR: 500,
+        CATEGORY_NOT_FOUND: 404,
+        UNKNOWN_ERROR: 500
+      }
+
+      const statusCode = errorMap[err.message] || 500
+      return handleHttp(res, err.message, statusCode, err)
     }
+
+    handleHttp(res, 'Internal Server Error', 500, err)
   }
 }
 
-const deleteCategoryController = async (req: Request, res: Response) => {
+const removeItems = async (req: Request, res: Response) => {
   try {
-    const itemId = req.params.id
-    const result = await deleteCategoryService(itemId)
+    const itemId = Number(req.params.id)
+    const result = await deleteCategory(itemId)
 
     if (!result)
       return res
@@ -96,37 +122,23 @@ const deleteCategoryController = async (req: Request, res: Response) => {
 
     res.status(200).json({ message: 'Category deleted successfully' })
   } catch (err: any) {
-    console.error('Error deleting category:', err)
-    switch (err.message) {
-      case 'FETCH_ERROR':
-        return res.status(500).json({
-          error: 'INTERNAL_SERVER_ERROR',
-          message: 'Error fetching category'
-        })
-      case 'CATEGORY_NOT_FOUND':
-        return res.status(404).json({
-          error: 'CATEGORY_NOT_FOUND',
-          message: 'Category not found'
-        })
-      case 'DELETE_CATEGORY_ERROR':
-        return res.status(500).json({
-          error: 'INTERNAL_SERVER_ERROR',
-          message: 'Error deleting category'
-        })
-      case 'UNKNOWN_ERROR':
-      default:
-        return res.status(500).json({
-          error: 'INTERNAL_SERVER_ERROR',
-          message: 'An unexpected error occurred'
-        })
+    if (err instanceof Error) {
+      const errorMap: Record<string, number> = {
+        FETCH_ERROR: 500,
+        CATEGORY_NOT_FOUND: 404,
+        DELETE_CATEGORY_ERROR: 500,
+        UNKNOWN_ERROR: 500
+      }
+
+      const statusCode = errorMap[err.message] || 500
+      return res.status(statusCode).json({
+        error: err.message,
+        message: `Error processing request: ${err.message}`
+      })
     }
+
+    return handleHttp(res, 'Internal Server Error', 500, err)
   }
 }
 
-export {
-  createCategoryController,
-  getAllCategoriesController,
-  getCategoryController,
-  updateCategoryController,
-  deleteCategoryController
-}
+export { addItems, getItems, getItem, updateItems, removeItems }

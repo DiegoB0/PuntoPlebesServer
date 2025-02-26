@@ -1,85 +1,94 @@
 import { Request, Response } from 'express'
-import { loginUser, registerUser } from '../services/auth'
-import { generateToken, verifyRefreshToken } from '../utils/jwt.handler'
-import {
-  validateSignUpUser,
-  validateSignInUser
-} from '../utils/validations/user_validator_handler'
+import { loginUser, createApiKey, refreshToken } from '../services/auth'
 import { handleHttp } from '../utils/error_handler'
+import { LoginUserDTO } from '../dtos/auth/request.dto'
+import { plainToInstance } from 'class-transformer'
+import { validate } from 'class-validator'
 
-const registerController = async ({ body }: Request, res: Response) => {
-  const { error } = validateSignUpUser(body)
-
-  if (error) {
-    console.log(error)
-    return res.status(400).json({
-      error: 'VALIDATION_ERROR',
-      message: error.details.map((detail) => detail.message).join(', ')
-    })
-  }
-
+const loginController = async (data: any, res: Response) => {
   try {
-    const responseUser = await registerUser(body)
-    res.status(201).json(responseUser)
-  } catch (e: any) {
-    switch (e.message) {
-      case 'USER_ALREADY_EXISTS':
-        return handleHttp(res, 'User already exists with this email', 409)
-      case 'INVALID_EMAIL':
-        return handleHttp(res, 'Invalid email provided', 422)
-      case 'INSERTION_ERROR':
-        return handleHttp(res, 'Error inserting user', 500)
-      default:
-        return handleHttp(res, 'An unexpected error occurred', 500)
+    const loginData = plainToInstance(LoginUserDTO, data)
+
+    // Validate the data
+    const errors = await validate(loginData)
+    if (errors.length > 0) {
+      return res.status(400).json({ errors })
     }
-  }
-}
+    const responseLogin = await loginUser(data)
 
-const loginController = async ({ body }: Request, res: Response) => {
-  console.log(body)
-  const { error } = validateSignInUser(body)
-
-  if (error) {
-    return res.status(400).json({
-      error: 'VALIDATION_ERROR',
-      message: error.details.map((detail) => detail.message).join(', ')
-    })
-  }
-
-  try {
-    const responseLogin = await loginUser(body)
     res.status(201).json(responseLogin)
   } catch (e: any) {
-    switch (e.message) {
-      case 'USER_NOT_FOUND':
-        return handleHttp(res, 'No user with this email', 409)
-      case 'INVALID_EMAIL':
-        return handleHttp(res, 'Invalid email provided', 400)
-      case 'INCORRECT_PASSWORD':
-        return handleHttp(res, 'Incorrect password provided', 500)
-      default:
-        return handleHttp(res, 'An unexpected error occurred', 500)
+    if (e instanceof Error) {
+      const errorMap: Record<string, number> = {
+        USER_NOT_FOUND: 409,
+        INVALID_EMAIL: 400,
+        INCORRECT_PASSWORD: 500,
+        UNKNOWN_ERROR: 500
+      }
+
+      const statusCode = errorMap[e.message] || 500
+      return handleHttp(res, e.message, statusCode, e)
     }
+
+    handleHttp(res, 'Internal Server Error', 500, e)
   }
 }
 
-const refreshTokenController = async (req: Request, res: Response) => {
-  const { refreshToken } = req.body
+const refreshTokenController = async (req: any, res: any) => {
+  try {
+    const { refreshTokenKey } = req.body
 
-  if (!refreshToken) {
-    return handleHttp(res, 'Refresh token is missing', 401)
+    if (!refreshTokenKey) {
+      return handleHttp(res, 'Refresh token is missing', 401)
+    }
+
+    const newAccessToken = await refreshToken(refreshTokenKey)
+
+    // Return the new access token
+    res.json({ accessToken: newAccessToken })
+  } catch (error) {
+    if (error instanceof Error) {
+      const errorMap: Record<string, number> = {
+        INVALID_REFRESH_TOKEN: 401,
+        REFRESH_TOKEN_NOT_FOUND: 404,
+        UNKNOWN_ERROR: 500
+      }
+
+      const statusCode = errorMap[error.message] || 500
+      return handleHttp(res, error.message, statusCode, error)
+    }
+
+    console.log(error)
+    return handleHttp(res, 'Error occurred while refreshing token', 500)
   }
-
-  const isValid = verifyRefreshToken(refreshToken)
-  if (!isValid) {
-    return handleHttp(res, 'Invalid refresh token', 403)
-  }
-
-  // Extract the user ID from the refresh token payload
-  const { email } = isValid as { email: string }
-  const newAccessToken = await generateToken(email)
-
-  res.json({ accessToken: newAccessToken })
 }
 
-export { registerController, loginController, refreshTokenController }
+const createApiKeyController = async (req: Request, res: Response) => {
+  try {
+    const user = req.body.user
+
+    if (!user) {
+      return handleHttp(res, 'User not found', 404)
+    }
+
+    const apiKey = await createApiKey(user.id)
+
+    return res.status(201).json({ apiKey: apiKey.key })
+  } catch (e: any) {
+    if (e instanceof Error) {
+      const errorMap: Record<string, number> = {
+        USER_NOT_FOUND: 404,
+        API_KEY_GENERATION_ERROR: 500,
+        UNKNOWN_ERROR: 500
+      }
+
+      const statusCode = errorMap[e.message] || 500
+      return handleHttp(res, e.message, statusCode, e)
+    }
+
+    console.log(e)
+    return handleHttp(res, 'Error generating API Key', 500)
+  }
+}
+
+export { loginController, refreshTokenController, createApiKeyController }
