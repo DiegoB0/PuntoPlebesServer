@@ -37,6 +37,7 @@ const loginUser = async (loginData: LoginUserDTO) => {
 
     // Return success response with tokens
     return {
+      existingUser,
       token,
       refreshToken,
       message: 'Sign in success'
