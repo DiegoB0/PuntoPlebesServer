@@ -48,4 +48,8 @@ export class UpdateModifierDTO {
   @IsOptional()
   @IsEnum(Menu)
   meal_type?: Menu
+
+  @ValidateNested()
+  @Type(() => ClaveDTO)
+  claveData: ClaveDTO
 }

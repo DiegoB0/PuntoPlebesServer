@@ -5,7 +5,7 @@ import {
   getItem,
   updateItems,
   removeItems
-} from '../controllers/user'
+} from '../controllers/clave'
 import { apiKeyMiddleware } from '../middlewares/apiKey'
 import { checkJwt } from '../middlewares/sessions'
 
@@ -14,16 +14,16 @@ const router = Router()
 /**
  * @swagger
  * tags:
- *   - name: Users
- *     description: API endpoints for managing users
+ *   name: Claves
+ *   description: API endpoints for managing claves
  */
 
 /**
  * @swagger
- * /user:
+ * /clave:
  *   post:
- *     summary: Create a new user
- *     tags: [Users]
+ *     summary: Create a new clave
+ *     tags: [Claves]
  *     security:
  *       - ApiKeyAuth: []
  *       - BearerAuth: []
@@ -32,45 +32,47 @@ const router = Router()
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/InsertUserDTO'
- *           example:
- *             name: "John Doe"
- *             email: "john@example.com"
- *             password: "password123"
- *             role: "admin"
+ *             type: object
+ *             properties:
+ *               palabra:
+ *                 type: string
+ *                 example: "Mayonesa"
+ *               clave:
+ *                 type: string
+ *                 example: "may"
  *     responses:
  *       201:
- *         description: User created successfully
+ *         description: Clave created successfully
  *       400:
  *         description: Validation error
  *       500:
- *         description: Internal server error
+ *         description: Server error
  */
 router.post('/', apiKeyMiddleware, checkJwt, addItems)
 
 /**
  * @swagger
- * /user:
+ * /clave:
  *   get:
- *     summary: Get all users
- *     tags: [Users]
+ *     summary: Get all claves
+ *     tags: [Claves]
  *     security:
  *       - ApiKeyAuth: []
  *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: A list of all users
+ *         description: A list of claves
  *       500:
- *         description: Internal server error
+ *         description: Server error
  */
 router.get('/', apiKeyMiddleware, checkJwt, getItems)
 
 /**
  * @swagger
- * /user/{id}:
+ * /clave/{id}:
  *   get:
- *     summary: Get a user by ID
- *     tags: [Users]
+ *     summary: Get a clave by ID
+ *     tags: [Claves]
  *     security:
  *       - ApiKeyAuth: []
  *       - BearerAuth: []
@@ -82,20 +84,20 @@ router.get('/', apiKeyMiddleware, checkJwt, getItems)
  *           type: integer
  *     responses:
  *       200:
- *         description: User found
+ *         description: Clave found
  *       404:
- *         description: User not found
+ *         description: Clave not found
  *       500:
- *         description: Internal server error
+ *         description: Server error
  */
 router.get('/:id', apiKeyMiddleware, checkJwt, getItem)
 
 /**
  * @swagger
- * /user/{id}:
+ * /clave/{id}:
  *   patch:
- *     summary: Update a user by ID
- *     tags: [Users]
+ *     summary: Update a clave by ID
+ *     tags: [Claves]
  *     security:
  *       - ApiKeyAuth: []
  *       - BearerAuth: []
@@ -110,30 +112,32 @@ router.get('/:id', apiKeyMiddleware, checkJwt, getItem)
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/UpdateUserDTO'
- *           example:
- *             name: "Jane Doe"
- *             email: "jane@example.com"
- *             password: "newpassword123"
- *             role: "admin"
+ *             type: object
+ *             properties:
+ *               palabra:
+ *                 type: string
+ *                 example: "Mayonesa"
+ *               clave:
+ *                 type: string
+ *                 example: "may"
  *     responses:
  *       200:
- *         description: User updated successfully
+ *         description: Clave updated successfully
  *       400:
  *         description: Validation error
  *       404:
- *         description: User not found
+ *         description: Clave not found
  *       500:
- *         description: Internal server error
+ *         description: Server error
  */
 router.patch('/:id', apiKeyMiddleware, checkJwt, updateItems)
 
 /**
  * @swagger
- * /user/{id}:
+ * /clave/{id}:
  *   delete:
- *     summary: Delete a user by ID
- *     tags: [Users]
+ *     summary: Delete a clave by ID
+ *     tags: [Claves]
  *     security:
  *       - ApiKeyAuth: []
  *       - BearerAuth: []
@@ -145,11 +149,11 @@ router.patch('/:id', apiKeyMiddleware, checkJwt, updateItems)
  *           type: integer
  *     responses:
  *       200:
- *         description: User deleted successfully
+ *         description: Clave deleted successfully
  *       404:
- *         description: User not found
+ *         description: Clave not found
  *       500:
- *         description: Internal server error
+ *         description: Server error
  */
 router.delete('/:id', apiKeyMiddleware, checkJwt, removeItems)
 
@@ -159,40 +163,22 @@ export { router }
  * @swagger
  * components:
  *   schemas:
- *     InsertUserDTO:
+ *     InsertClaveDTO:
  *       type: object
  *       properties:
- *         name:
+ *         palabra:
  *           type: string
- *           example: "John Doe"
- *         email:
+ *           example: "Ejemplo palabra"
+ *         clave:
  *           type: string
- *           example: "john@example.com"
- *         password:
- *           type: string
- *           example: "password123"
- *         role:
- *           type: string
- *           enum:
- *             - ADMIN
- *             - USER
- *           example: "USER"
- *     UpdateUserDTO:
+ *           example: "Ejemplo clave"
+ *     UpdateClaveDTO:
  *       type: object
  *       properties:
- *         name:
+ *         palabra:
  *           type: string
- *           example: "Jane Doe"
- *         email:
+ *           example: "Nueva palabra"
+ *         clave:
  *           type: string
- *           example: "jane@example.com"
- *         password:
- *           type: string
- *           example: "newpassword123"
- *         role:
- *           type: string
- *           enum:
- *             - ADMIN
- *             - USER
- *           example: "ADMIN"
+ *           example: "Nueva clave"
  */

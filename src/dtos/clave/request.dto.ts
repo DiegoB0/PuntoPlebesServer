@@ -1,11 +1,21 @@
-import { IsString, IsNotEmpty } from 'class-validator'
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator'
 
-export class InsertPlainClaveDTO {
+export class InsertClaveDTO {
   @IsString()
   @IsNotEmpty()
   palabra: string
 
   @IsString()
   @IsNotEmpty()
+  clave: string
+}
+
+export class UpdateClaveDTO {
+  @IsString()
+  @IsOptional()
+  palabra: string
+
+  @IsString()
+  @IsOptional()
   clave: string
 }

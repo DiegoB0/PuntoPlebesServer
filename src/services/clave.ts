@@ -5,7 +5,7 @@ import { TipoClave } from '../entities/enums/Clave.enum'
 
 const claveRepo: Repository<Clave> = AppDataSource.getRepository(Clave)
 
-const insertPlainClave = async ({
+const insertClave = async ({
   palabra,
   clave
 }: {
@@ -27,7 +27,7 @@ const insertPlainClave = async ({
   }
 }
 
-const getAllClaves = async () => {
+const getClaves = async () => {
   try {
     const claves = await claveRepo.find()
     if (!claves.length) throw new Error('NO_CLAVES_FOUND')
@@ -76,10 +76,4 @@ const deleteClave = async (id: number) => {
   }
 }
 
-export {
-  insertPlainClave,
-  getAllClaves,
-  getClaveById,
-  updateClave,
-  deleteClave
-}
+export { insertClave, getClaves, getClaveById, updateClave, deleteClave }

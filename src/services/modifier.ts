@@ -43,7 +43,7 @@ const insertModifier = async ({
   }
 }
 
-const getAllModifiers = async () => {
+const getModifiers = async () => {
   try {
     const modificadores = await modificadorRepo.find({ relations: ['clave'] })
     if (!modificadores.length) throw new Error('NO_MODIFICADORES_FOUND')
@@ -114,7 +114,7 @@ const deleteModifier = async (id: number) => {
 
 export {
   insertModifier,
-  getAllModifiers,
+  getModifiers,
   getModifierById,
   updateModifier,
   deleteModifier

@@ -20,6 +20,7 @@ const loginUser = async (loginData: LoginUserDTO) => {
     const existingUser = await userRepo.findOne({
       where: { email: loginData.email }
     })
+
     if (!existingUser) {
       throw new Error('USER_NOT_FOUND')
     }
@@ -34,27 +35,39 @@ const loginUser = async (loginData: LoginUserDTO) => {
     const token = await generateToken(existingUser.email)
     const refreshToken = await generateRereshToken(existingUser.email)
 
+    // Return success response with tokens
     return {
       token,
       refreshToken,
       message: 'Sign in success'
     }
   } catch (error) {
+    // Ensure errors are thrown appropriately
     throw error instanceof Error ? error : new Error('UNKNOWN_ERROR')
   }
 }
 
-const createApiKey = async (userId: number): Promise<APIKey> => {
-  const user = await userRepo.findOne({ where: { id: userId } })
-  if (!user) {
+const createApiKey = async (loginData: LoginUserDTO): Promise<APIKey> => {
+  // Find user by email
+  const existingUser = await userRepo.findOne({
+    where: { email: loginData.email }
+  })
+  if (!existingUser) {
     throw new Error('USER_NOT_FOUND')
   }
 
+  // Verify password
+  const isCorrect = await verified(loginData.password, existingUser.password)
+  if (!isCorrect) {
+    throw new Error('INCORRECT_PASSWORD')
+  }
+
+  // Generate new API key
   const newApiKey = new APIKey()
   newApiKey.key = uuidv4()
-  newApiKey.user = user
+  newApiKey.user = existingUser
 
-  // Save the API key to the database
+  // Save API key to database
   await apiKeyRepo.save(newApiKey)
 
   return newApiKey

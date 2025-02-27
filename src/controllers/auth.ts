@@ -5,32 +5,46 @@ import { LoginUserDTO } from '../dtos/auth/request.dto'
 import { plainToInstance } from 'class-transformer'
 import { validate } from 'class-validator'
 
-const loginController = async (data: any, res: Response) => {
+const loginController = async (req: Request, res: Response) => {
   try {
-    const loginData = plainToInstance(LoginUserDTO, data)
+    const loginData = plainToInstance(LoginUserDTO, req.body)
 
     // Validate the data
     const errors = await validate(loginData)
     if (errors.length > 0) {
       return res.status(400).json({ errors })
     }
-    const responseLogin = await loginUser(data)
 
-    res.status(201).json(responseLogin)
+    // Call loginUser service
+    const responseLogin = await loginUser(req.body)
+
+    // Return successful response
+    return res.status(200).json(responseLogin) // Using 200 OK for login success
   } catch (e: any) {
     if (e instanceof Error) {
-      const errorMap: Record<string, number> = {
-        USER_NOT_FOUND: 409,
-        INVALID_EMAIL: 400,
-        INCORRECT_PASSWORD: 500,
-        UNKNOWN_ERROR: 500
+      // Error handling based on custom error messages
+      const errorMap: Record<string, { message: string; statusCode: number }> =
+        {
+          USER_NOT_FOUND: { message: 'User not found', statusCode: 404 },
+          INVALID_EMAIL: { message: 'Invalid email format', statusCode: 400 },
+          INCORRECT_PASSWORD: {
+            message: 'Incorrect password',
+            statusCode: 401
+          },
+          UNKNOWN_ERROR: { message: 'Internal server error', statusCode: 500 }
+        }
+
+      const error = errorMap[e.message] || {
+        message: 'Internal server error',
+        statusCode: 500
       }
 
-      const statusCode = errorMap[e.message] || 500
-      return handleHttp(res, e.message, statusCode, e)
+      // Return the mapped error response
+      return res.status(error.statusCode).json({ message: error.message })
     }
 
-    handleHttp(res, 'Internal Server Error', 500, e)
+    // Catch all for unexpected errors
+    return res.status(500).json({ message: 'Internal server error', error: e })
   }
 }
 
@@ -65,19 +79,22 @@ const refreshTokenController = async (req: any, res: any) => {
 
 const createApiKeyController = async (req: Request, res: Response) => {
   try {
-    const user = req.body.user
+    const loginData = plainToInstance(LoginUserDTO, req.body)
 
-    if (!user) {
-      return handleHttp(res, 'User not found', 404)
+    // Validate request data
+    const errors = await validate(loginData)
+    if (errors.length > 0) {
+      return res.status(400).json({ errors })
     }
 
-    const apiKey = await createApiKey(user.id)
+    const apiKey = await createApiKey(loginData)
 
     return res.status(201).json({ apiKey: apiKey.key })
   } catch (e: any) {
     if (e instanceof Error) {
       const errorMap: Record<string, number> = {
         USER_NOT_FOUND: 404,
+        INCORRECT_PASSWORD: 401,
         API_KEY_GENERATION_ERROR: 500,
         UNKNOWN_ERROR: 500
       }
