@@ -430,6 +430,59 @@ const getSalesByPeriod = async (
     throw new Error('FAILED_TO_FETCH_SALES')
   }
 }
+const getLastOrderNumber = async (): Promise<number> => {
+  try {
+    const lastOrder = await AppDataSource.getRepository(Order)
+      .createQueryBuilder('order')
+      .orderBy('order.created_at', 'DESC')
+      .getOne()
+
+    if (!lastOrder) {
+      throw new Error('NO_ORDER_FOUND')
+    }
+
+    return lastOrder.order_number
+  } catch (error) {
+    console.error('Error fetching last order number:', error)
+    throw error instanceof Error ? error : new Error('UNKNOWN_ERROR')
+  }
+}
+
+const getNextOrderNumber = async (): Promise<number> => {
+  const queryRunner = AppDataSource.createQueryRunner()
+
+  try {
+    await queryRunner.startTransaction()
+
+    // Calculate order number based on business day (starting at 3am)
+    let now = moment()
+    if (now.hour() < 3) {
+      now = now.subtract(1, 'day')
+    }
+    const startOfDay = moment(now).set({
+      hour: 3,
+      minute: 0,
+      second: 0,
+      millisecond: 0
+    })
+    const endOfDay = moment(startOfDay).add(1, 'day')
+
+    // Query orders for the current business day using Between operator
+    const ordersToday = await queryRunner.manager.find(Order, {
+      where: { created_at: Between(startOfDay.toDate(), endOfDay.toDate()) }
+    })
+    const nextOrderNumber = ordersToday.length + 1
+
+    await queryRunner.commitTransaction()
+    return nextOrderNumber
+  } catch (error) {
+    await queryRunner.rollbackTransaction()
+    console.error('Error fetching next order number:', error)
+    throw error instanceof Error ? error : new Error('UNKNOWN_ERROR')
+  } finally {
+    await queryRunner.release()
+  }
+}
 
 export {
   insertOrder,
@@ -437,5 +490,7 @@ export {
   getOrderById,
   deleteOrder,
   updateOrder,
-  getSalesByPeriod
+  getSalesByPeriod,
+  getLastOrderNumber,
+  getNextOrderNumber
 }

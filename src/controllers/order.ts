@@ -5,12 +5,50 @@ import {
   getOrderById,
   deleteOrder,
   updateOrder,
-  getSalesByPeriod
+  getSalesByPeriod,
+  getLastOrderNumber,
+  getNextOrderNumber
 } from '../services/order'
 import { handleHttp } from '../utils/error_handler'
 import { plainToInstance } from 'class-transformer'
 import { validate } from 'class-validator'
 import { InsertOrderDTO, UpdateOrderDTO } from '../dtos/order/request.dto'
+
+const getNextOrderNumberController = async (req: Request, res: Response) => {
+  try {
+    const nextOrderNumber = await getNextOrderNumber()
+    res.status(200).json(nextOrderNumber)
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      const errorMap: Record<string, number> = {
+        FAILED_TO_FETCH_NEXT_ORDER_NUMBER: 500,
+        UNKNOWN_ERROR: 500
+      }
+      const statusCode = errorMap[error.message] || 500
+      return handleHttp(res, error.message, statusCode, error)
+    }
+
+    handleHttp(res, 'Internal Server Error', 500, error)
+  }
+}
+
+const getLastOrderNumberController = async (req: Request, res: Response) => {
+  try {
+    const lastOrderNumber = await getLastOrderNumber()
+    res.status(200).json(lastOrderNumber)
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      const errorMap: Record<string, number> = {
+        FAILED_TO_FETCH_LAST_ORDER_NUMBER: 500,
+        UNKNOWN_ERROR: 500
+      }
+      const statusCode = errorMap[error.message] || 500
+      return handleHttp(res, error.message, statusCode, error)
+    }
+
+    handleHttp(res, 'Internal Server Error', 500, error)
+  }
+}
 
 const addItems = async (req: Request, res: Response) => {
   try {
@@ -208,4 +246,13 @@ const getReportItems = async (req: Request, res: Response) => {
   }
 }
 
-export { addItems, getItems, getItem, removeItems, updateItems, getReportItems }
+export {
+  addItems,
+  getItems,
+  getItem,
+  removeItems,
+  updateItems,
+  getReportItems,
+  getLastOrderNumberController,
+  getNextOrderNumberController
+}

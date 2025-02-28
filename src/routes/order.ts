@@ -5,19 +5,36 @@ import {
   getItem,
   removeItems,
   updateItems,
-  getReportItems
+  getReportItems,
+  getNextOrderNumberController
 } from '../controllers/order'
 import { apiKeyMiddleware } from '../middlewares/apiKey'
 import { checkJwt } from '../middlewares/sessions'
 
 const router = express.Router()
-
 /**
  * @swagger
  * tags:
  *   - name: Orders
  *     description: API endpoints for managing orders
  */
+
+/**
+ * @swagger
+ * /order/last:
+ *   post:
+ *     summary: Get the next order number
+ *     tags: [Orders]
+ *     security:
+ *       - ApiKeyAuth: []
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved the next order number
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/last', apiKeyMiddleware, checkJwt, getNextOrderNumberController)
 
 /**
  * @swagger
