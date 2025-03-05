@@ -14,6 +14,7 @@ const claveRepo: Repository<Clave> = AppDataSource.getRepository(Clave)
 
 const insertMeal = async (mealData: InsertMealDTO) => {
   try {
+    console.log(mealData)
     // Check if category exists
     const category = await categoryRepo.findOne({
       where: { id: mealData.categoryId }
@@ -121,7 +122,7 @@ const updateMeal = async (id: number, mealData: UpdateMealDTO) => {
     // Fetch existing meal with related 'category' and 'clave'
     const existingMeal = await mealRepo.findOne({
       where: { id },
-      relations: ['category', 'clave'] // Include 'clave' relation
+      relations: ['category', 'clave']
     })
 
     if (!existingMeal) {

@@ -9,18 +9,14 @@ import {
 import { handleHttp } from '../utils/error_handler'
 import { uploadImage } from '../utils/cloudinary'
 import fs from 'fs-extra'
-import { InsertMealDTO, UpdateMealDTO } from '../dtos/meal/request.dto'
-import { plainToInstance } from 'class-transformer'
-import { validate } from 'class-validator'
 
 const addItems = async (req: Request, res: Response) => {
   try {
-    let mealData = plainToInstance(InsertMealDTO, req.body)
+    let mealData = req.body
 
-    // Validate DTO
-    const errors = await validate(mealData)
-    if (errors.length > 0) {
-      return res.status(400).json({ errors })
+    if (mealData.isClaveApplied) {
+      mealData.isClaveApplied =
+        mealData.isClaveApplied.toString().toLowerCase() === 'true'
     }
 
     let image_id = ''
@@ -103,13 +99,7 @@ const getItem = async ({ params }: Request, res: Response) => {
 
 const updateItems = async (req: Request, res: Response) => {
   try {
-    let mealData = plainToInstance(UpdateMealDTO, req.body)
-
-    // Validate DTO
-    const errors = await validate(mealData)
-    if (errors.length > 0) {
-      return res.status(400).json({ errors })
-    }
+    let mealData = req.body
 
     const itemId = Number(req.params.id)
 
@@ -128,6 +118,8 @@ const updateItems = async (req: Request, res: Response) => {
         return handleHttp(res, 'Multiple images are not supported', 400)
       }
     }
+
+    // Validate DTO
 
     const updatedMeal = await updateMeal(itemId, mealData)
     res.status(200).json(updatedMeal)

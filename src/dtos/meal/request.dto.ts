@@ -16,7 +16,7 @@ export class InsertMealDTO {
 
   @IsOptional()
   @IsString()
-  image_id?: number
+  image_id?: string
 
   @IsInt()
   price?: number
@@ -51,7 +51,7 @@ export class UpdateMealDTO {
 
   @IsOptional()
   @IsString()
-  image_id?: number
+  image_id?: string
 
   @IsOptional()
   @IsInt()

@@ -6,6 +6,7 @@ import express, { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from './config/typeorm'
 import swaggerSpec from './swagger'
 import swaggerUI from 'swagger-ui-express'
+import fileUpload from 'express-fileupload'
 
 // Inicializar la aplicación de Express
 const app = express()
@@ -18,8 +19,16 @@ const corsOptions =
 
 // Configuring middlewares
 app.use(cors(corsOptions))
-app.use(express.json())
 app.use(morgan('dev'))
+app.use(express.json())
+
+// Middleware para subir imagenes
+app.use(
+  fileUpload({
+    useTempFiles: true,
+    tempFileDir: './uploads'
+  })
+)
 
 // Serve swagger
 if (process.env.NODE_ENV === 'dev') {

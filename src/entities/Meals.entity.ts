@@ -45,7 +45,7 @@ export class Meal {
   clave: Clave
 
   @Column({ nullable: true })
-  image_id: number
+  image_id: string
 
   @Column({ nullable: true })
   image_url: string
