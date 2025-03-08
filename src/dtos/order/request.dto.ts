@@ -34,11 +34,11 @@ class PaymentDTO {
 
 export class InsertOrderDTO {
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   client_name: string
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   client_phone: string
 
   @IsOptional()
@@ -50,10 +50,11 @@ export class InsertOrderDTO {
   @Type(() => OrderItemDTO)
   items: OrderItemDTO[]
 
+  @IsOptional() // ✅ Pagar despues
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PaymentDTO)
-  payments: PaymentDTO[]
+  payments?: PaymentDTO[]
 }
 
 export class UpdateOrderDTO {
