@@ -4,10 +4,13 @@ import {
   Column,
   CreateDateColumn,
   OneToOne,
-  JoinColumn
+  JoinColumn,
+  ManyToMany,
+  JoinTable
 } from 'typeorm'
 import { Clave } from './Claves.entity'
 import { Menu } from './enums/Menu.enum'
+import { Category } from './Categories.entity'
 
 @Entity('modificadores')
 export class Modificador {
@@ -32,6 +35,15 @@ export class Modificador {
 
   @Column()
   price?: number
+
+  @ManyToMany(() => Category, (category) => category.modificadores)
+  @JoinTable({
+    name: 'modifier_category', // Join table name
+    joinColumn: { name: 'modificador_id', referencedColumnName: 'id' },
+
+    inverseJoinColumn: { name: 'category_id', referencedColumnName: 'id' }
+  })
+  categories: Category[]
 
   @OneToOne(() => Clave, (clave) => clave.modificador)
   @JoinColumn({ name: 'clave_id' })

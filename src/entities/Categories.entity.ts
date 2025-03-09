@@ -3,10 +3,12 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn
+  CreateDateColumn,
+  ManyToMany
 } from 'typeorm'
 import { Meal } from './Meals.entity'
 import { Menu } from './enums/Menu.enum'
+import { Modificador } from './Modificadores.entity'
 
 @Entity('categories')
 export class Category {
@@ -27,4 +29,7 @@ export class Category {
 
   @OneToMany(() => Meal, (meal) => meal.category)
   meals: Meal[]
+
+  @ManyToMany(() => Modificador, (modificador) => modificador.categories)
+  modificadores: Modificador[]
 }
