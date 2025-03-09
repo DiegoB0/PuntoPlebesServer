@@ -18,7 +18,7 @@ const checkJwt = async (req: Request, res: Response, next: NextFunction) => {
     }
 
     // Extract and verify the JWT token
-    const jwt = authHeader.split(' ').pop()
+    const jwt = authHeader.split(' ')[1]
     if (!jwt) {
       return res
         .status(401)
@@ -27,7 +27,8 @@ const checkJwt = async (req: Request, res: Response, next: NextFunction) => {
 
     const userData = verifyToken(jwt)
 
-    if (!userData) {
+    if (!userData || !userData.email) {
+      // Chequear por email
       return res.status(401).json({
         error: 'INVALID_SESSION',
         message: 'The provided token is invalid'
@@ -35,6 +36,7 @@ const checkJwt = async (req: Request, res: Response, next: NextFunction) => {
     }
 
     ;(req as RequestWithUser).userEmail = userData.email
+    ;(req as any).userRole = userData.role
 
     next()
   } catch (e) {

@@ -32,7 +32,10 @@ const loginUser = async (loginData: LoginUserDTO) => {
     }
 
     // Generate JWT tokens
-    const token = await generateToken(existingUser.email)
+    const token = await generateToken({
+      email: existingUser.email,
+      role: existingUser.role
+    })
     const refreshToken = await generateRereshToken(existingUser.email)
 
     const user = {
@@ -40,7 +43,7 @@ const loginUser = async (loginData: LoginUserDTO) => {
       user_role: existingUser.role
     }
 
-    console.log(user)
+    // console.log(user)
 
     // Return success response with tokens
     return {
@@ -87,9 +90,9 @@ const refreshToken = async (refreshToken: string) => {
     throw new Error('Invalid refresh token')
   }
 
-  const { email } = isValid as { email: string }
+  const { email, role } = isValid as { email: string; role: string }
 
-  const newAccessToken = await generateToken(email)
+  const newAccessToken = await generateToken({ email, role })
 
   return newAccessToken
 }

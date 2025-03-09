@@ -3,8 +3,9 @@ import { JwtPayload, sign, verify } from 'jsonwebtoken'
 const JWT_SECRET = process.env.JWT_SECRET || 'token01'
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'token02'
 
-const generateToken = async (id: string) => {
-  const jwt = sign({ id }, JWT_SECRET, {
+const generateToken = async (user: { email: string; role: string }) => {
+  const jwt = sign({ email: user.email, role: user.role }, JWT_SECRET, {
+    // Incluir email y role
     expiresIn: '7d'
   })
   return jwt
