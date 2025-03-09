@@ -3,7 +3,10 @@ import {
   IsNotEmpty,
   IsEnum,
   IsOptional,
-  ValidateNested
+  ValidateNested,
+  IsArray,
+  IsBoolean,
+  IsNumber
 } from 'class-validator'
 import { Type } from 'class-transformer'
 import { Menu } from '../../entities/enums/Menu.enum'
@@ -27,9 +30,14 @@ export class InsertModifierDTO {
   @IsNotEmpty()
   description: string
 
-  @IsOptional()
-  @IsEnum(Menu)
-  meal_type?: Menu
+  @IsArray()
+  categoryIds: []
+
+  @IsBoolean()
+  hasPrice: boolean
+
+  @IsNumber()
+  price: number
 
   @ValidateNested()
   @Type(() => ClaveDTO)

@@ -1,19 +1,24 @@
 import { AppDataSource } from '../config/typeorm'
-import { Repository } from 'typeorm'
+import { In, Repository } from 'typeorm'
 import { Modificador } from '../entities/Modificadores.entity'
 import { Clave } from '../entities/Claves.entity'
 import { TipoClave } from '../entities/enums/Clave.enum'
 import { Menu } from '../entities/enums/Menu.enum'
+import { Category } from '../entities/Categories.entity'
 
 const modificadorRepo: Repository<Modificador> =
   AppDataSource.getRepository(Modificador)
 const claveRepo: Repository<Clave> = AppDataSource.getRepository(Clave)
+const categoryRepo: Repository<Category> = AppDataSource.getRepository(Category)
 
 const insertModifier = async ({
   name,
   description,
   meal_type,
-  claveData
+  claveData,
+  hasPrice,
+  price,
+  categoryIds
 }: any) => {
   try {
     if (!Object.values(Menu).includes(meal_type)) {
@@ -28,11 +33,25 @@ const insertModifier = async ({
 
     await claveRepo.save(clave)
 
+    // Add categories
+    const categories = await categoryRepo.find({
+      where: {
+        id: In(categoryIds)
+      }
+    });
+
+    if (categories.length !== categoryIds.length) {
+      throw new Error('One or more categories not found');
+    }
+
     const modificador = modificadorRepo.create({
       name,
       description,
       meal_type,
-      clave
+      clave,
+      hasPrice,
+      price,
+      categories
     })
 
     await modificadorRepo.save(modificador)
