@@ -38,10 +38,10 @@ const insertModifier = async ({
       where: {
         id: In(categoryIds)
       }
-    });
+    })
 
     if (categories.length !== categoryIds.length) {
-      throw new Error('One or more categories not found');
+      throw new Error('One or more categories not found')
     }
 
     const modificador = modificadorRepo.create({
