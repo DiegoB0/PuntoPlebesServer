@@ -1,4 +1,4 @@
-import { sign, verify } from 'jsonwebtoken'
+import { JwtPayload, sign, verify } from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'token01'
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'token02'
@@ -12,8 +12,11 @@ const generateToken = async (id: string) => {
 
 const verifyToken = (jwt: string) => {
   try {
-    const isCorrect = verify(jwt, JWT_SECRET)
-    return isCorrect
+    const decoded = verify(jwt, JWT_SECRET) as JwtPayload
+    if (!decoded.email) {
+      return false
+    }
+    return decoded
   } catch (error) {
     console.error('Token verification failed:', error)
     return false

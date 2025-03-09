@@ -3,11 +3,14 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  OneToMany
+  OneToMany,
+  ManyToOne,
+  JoinColumn
 } from 'typeorm'
 import { OrderItem } from './OrderItems.entity'
 import { Payment } from './Payments.entity'
 import { OrderStatus } from './enums/OrderStatus.enum'
+import { User } from './User.entity'
 
 @Entity('orders')
 export class Order {
@@ -37,6 +40,10 @@ export class Order {
 
   @OneToMany(() => Payment, (payment) => payment.order)
   payments: Payment[]
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'userId' })
+  user: User
 
   @CreateDateColumn()
   created_at: Date

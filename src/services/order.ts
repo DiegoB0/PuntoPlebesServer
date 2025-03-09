@@ -8,8 +8,25 @@ import { Meal } from '../entities/Meals.entity'
 import { AppDataSource } from '../config/typeorm'
 import { In, Between } from 'typeorm'
 import { OrderStatus } from '../entities/enums/OrderStatus.enum'
+import { Repository } from 'typeorm'
+import { User } from '../entities/User.entity'
+import { createLog } from './log'
+import { ActionType } from '../entities/enums/ActionType.enum'
+import { Modificador } from '../entities/Modificadores.entity'
 
-const insertOrder = async (orderData: any): Promise<any> => {
+const orderRepo: Repository<Order> = AppDataSource.getRepository(Order)
+const userRepo: Repository<User> = AppDataSource.getRepository(User)
+const modifierRepo: Repository<Modificador> =
+  AppDataSource.getRepository(Modificador)
+
+const insertOrder = async (orderData: any, userEmail: string): Promise<any> => {
+  console.log(userEmail)
+  const user = await userRepo.findOne({ where: { email: userEmail } })
+
+  if (!user) {
+    throw new Error('USER_NOT_FOUND')
+  }
+
   const queryRunner = AppDataSource.createQueryRunner()
 
   try {
@@ -44,6 +61,7 @@ const insertOrder = async (orderData: any): Promise<any> => {
     order.order_status = orderData.order_status || OrderStatus.Proceso
     order.client_name = orderData.client_name
     order.client_phone = orderData.client_phone
+    order.user = user
 
     // We will calculate total_price based on items below
     let totalPrice = 0
@@ -64,7 +82,11 @@ const insertOrder = async (orderData: any): Promise<any> => {
     const mealMap = new Map(meals.map((meal) => [meal.id, meal]))
 
     orderData.items.forEach(
-      (item: { meal_id: number; quantity: number; details?: string[] }) => {
+      async (item: {
+        meal_id: number
+        quantity: number
+        details?: string[]
+      }) => {
         const meal = mealMap.get(item.meal_id)
         if (!meal) {
           throw new Error(`Meal with ID ${item.meal_id} not found`)
@@ -82,15 +104,32 @@ const insertOrder = async (orderData: any): Promise<any> => {
         orderItem.quantity = item.quantity
         orderItems.push(orderItem)
 
-        // Create order item details (if any)
-        if (item.details && item.details.length > 0) {
-          item.details.forEach((detail: string) => {
+        if (item.details && item.details.length) {
+          const details = item.details || []
+
+          const selectedModifiers = await modifierRepo.find({
+            where: {
+              id: In(details)
+            }
+          })
+          selectedModifiers.forEach((modifier) => {
             const orderItemDetail = new OrderItemDetail()
             orderItemDetail.orderItem = orderItem
-            orderItemDetail.details = [detail]
+            orderItemDetail.details = [modifier]
             orderItemDetails.push(orderItemDetail)
           })
         }
+
+        // ==================== LAST APPROACH WITH DETAILS AS ARRAY OF STRINGS ============================
+        // Create order item details (if any)
+        // if (item.details && item.details.length > 0) {
+        //   item.details.forEach((detail: string) => {
+        //     const orderItemDetail = new OrderItemDetail()
+        //     orderItemDetail.orderItem = orderItem
+        //     orderItemDetail.details = [detail]
+        //     orderItemDetails.push(orderItemDetail)
+        //   })
+        // }
       }
     )
 
@@ -139,6 +178,9 @@ const insertOrder = async (orderData: any): Promise<any> => {
     // Drop the redis cache
     redis.del('orders')
 
+    // Log for logs table
+    createLog(user, 'Tomo una nueva orden', ActionType.Create)
+
     // -------------------------------
     // 5. Return result
     // -------------------------------
@@ -170,12 +212,13 @@ const getOrders = async (): Promise<Order[]> => {
 
     console.log('Cache miss: Fetching orders from database')
 
-    const orders = await AppDataSource.getRepository(Order)
+    const orders = await orderRepo
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.orderItems', 'orderItem')
       .leftJoinAndSelect('orderItem.orderItemDetails', 'orderItemDetail')
       .leftJoinAndSelect('orderItem.meal', 'meal')
       .leftJoinAndSelect('order.payments', 'payment')
+      .leftJoinAndSelect('order.user', 'user')
       .getMany()
 
     // 3. Check if orders were found
@@ -206,12 +249,13 @@ const getOrderById = async (orderId: string): Promise<Order | null> => {
     console.log(`Cache miss: Fetching order ${orderId} from database`)
 
     // 2. Fetch the order with related data using TypeORM query builder
-    const order = await AppDataSource.getRepository(Order)
+    const order = await orderRepo
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.orderItems', 'orderItem')
       .leftJoinAndSelect('orderItem.orderItemDetails', 'orderItemDetail')
       .leftJoinAndSelect('orderItem.meal', 'meal')
       .leftJoinAndSelect('order.payments', 'payment')
+      .leftJoinAndSelect('order.user', 'user')
       .where('order.id = :orderId', { orderId })
       .getOne()
 
@@ -229,10 +273,20 @@ const getOrderById = async (orderId: string): Promise<Order | null> => {
   }
 }
 
-const updateOrder = async (orderId: number, orderData: any): Promise<any> => {
+const updateOrder = async (
+  orderId: number,
+  orderData: any,
+  userEmail: string
+): Promise<any> => {
   const queryRunner = AppDataSource.createQueryRunner()
 
   try {
+    console.log(userEmail)
+    const user = await userRepo.findOne({ where: { email: userEmail } })
+
+    if (!user) {
+      throw new Error('USER_NOT_FOUND')
+    }
     await queryRunner.startTransaction()
 
     // Fetch the order to update
@@ -254,6 +308,10 @@ const updateOrder = async (orderId: number, orderData: any): Promise<any> => {
     if (orderData.client_phone) {
       order.client_phone = orderData.client_phone
     }
+    //Modify the new user that modified the order
+    if (user) {
+      order.user = user
+    }
 
     // If items are provided, process the items update
     let totalPrice = 0
@@ -271,7 +329,11 @@ const updateOrder = async (orderId: number, orderData: any): Promise<any> => {
       const mealMap = new Map(meals.map((meal) => [meal.id, meal]))
 
       orderData.items.forEach(
-        (item: { meal_id: number; quantity: number; details?: string[] }) => {
+        async (item: {
+          meal_id: number
+          quantity: number
+          details?: string[]
+        }) => {
           const meal = mealMap.get(item.meal_id)
           if (!meal) {
             throw new Error(`Meal with ID ${item.meal_id} not found`)
@@ -288,10 +350,20 @@ const updateOrder = async (orderId: number, orderData: any): Promise<any> => {
           orderItems.push(orderItem)
 
           if (item.details && item.details.length > 0) {
-            item.details.forEach((detail: string) => {
+            const details = item.details || []
+
+            const selectedModifiers = await modifierRepo.find({
+              where: {
+                id: In(details)
+              }
+            })
+
+            selectedModifiers.forEach((modifier) => {
               const orderItemDetail = new OrderItemDetail()
               orderItemDetail.orderItem = orderItem
-              orderItemDetail.details = [detail]
+
+              orderItemDetail.details = [modifier]
+
               orderItemDetails.push(orderItemDetail)
             })
           }
@@ -315,6 +387,9 @@ const updateOrder = async (orderId: number, orderData: any): Promise<any> => {
     // Drop the redis cache
     redis.del('orders')
 
+    // Log for logs table
+    createLog(user, 'Modifico una orden', ActionType.Update)
+
     return {
       message: 'Order updated successfully',
       totalPrice,
@@ -328,22 +403,33 @@ const updateOrder = async (orderId: number, orderData: any): Promise<any> => {
   }
 }
 
-const deleteOrder = async (orderId: number): Promise<void> => {
+const deleteOrder = async (
+  orderId: number,
+  userEmail: string
+): Promise<void> => {
   try {
-    const orderRepository = AppDataSource.getRepository(Order)
+    console.log(userEmail)
+    const user = await userRepo.findOne({ where: { email: userEmail } })
+
+    if (!user) {
+      throw new Error('USER_NOT_FOUND')
+    }
 
     // 1. Check if the order exists
-    const order = await orderRepository.findOne({ where: { id: orderId } })
+    const order = await orderRepo.findOne({ where: { id: orderId } })
     if (!order) {
       throw new Error('ORDER_NOT_FOUND')
     }
 
     // 2. Delete the order from the database
-    await orderRepository.remove(order)
+    await orderRepo.remove(order)
 
     // 3. Remove the cached order from Redis
     await redis.del(`order:${orderId}`)
     await redis.del('orders') // Invalidate cached orders list
+
+    // Log for logs table
+    createLog(user, 'Elimino una orden', ActionType.Delete)
 
     console.log(`Order ${orderId} deleted successfully`)
   } catch (error) {

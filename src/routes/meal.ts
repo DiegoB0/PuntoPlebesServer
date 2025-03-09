@@ -52,7 +52,7 @@ const router = Router()
  *       500:
  *         description: Internal server error.
  */
-router.post('/', addItems)
+router.post('/', apiKeyMiddleware, checkJwt, addItems)
 
 /**
  * @swagger

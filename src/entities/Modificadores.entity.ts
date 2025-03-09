@@ -27,7 +27,13 @@ export class Modificador {
   })
   meal_type: string
 
-  @OneToOne(() => Clave, (clave) => clave.modificador, { nullable: true })
+  @Column()
+  hasPrice: boolean
+
+  @Column()
+  price?: number
+
+  @OneToOne(() => Clave, (clave) => clave.modificador)
   @JoinColumn({ name: 'clave_id' })
   clave: Clave
 

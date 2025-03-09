@@ -13,6 +13,7 @@ import { handleHttp } from '../utils/error_handler'
 import { plainToInstance } from 'class-transformer'
 import { validate } from 'class-validator'
 import { InsertOrderDTO, UpdateOrderDTO } from '../dtos/order/request.dto'
+import { RequestWithUser } from '../middlewares/sessions'
 
 const getNextOrderNumberController = async (req: Request, res: Response) => {
   try {
@@ -52,6 +53,13 @@ const getLastOrderNumberController = async (req: Request, res: Response) => {
 
 const addItems = async (req: Request, res: Response) => {
   try {
+    const userEmail = (req as RequestWithUser).userEmail
+    if (!userEmail) {
+      return res.status(400).json({
+        message: 'Not user associated with this operation'
+      })
+    }
+
     const orderData = plainToInstance(InsertOrderDTO, req.body)
 
     // Validate the order data
@@ -67,11 +75,12 @@ const addItems = async (req: Request, res: Response) => {
         }))
       })
     }
-    const responseItem = await insertOrder(req.body)
+    const responseItem = await insertOrder(req.body, userEmail)
     res.status(201).json(responseItem)
   } catch (error: unknown) {
     if (error instanceof Error) {
       const errorMap: Record<string, number> = {
+        USER_NOT_FOUND: 404,
         ORDER_INSERT_ERROR: 500,
         ORDER_RETRIEVE_ERROR: 500,
         MEAL_FETCH_ERROR: 404,
@@ -139,6 +148,13 @@ const getItem = async (req: Request, res: Response) => {
 
 const updateItems = async (req: Request, res: Response) => {
   try {
+    const userEmail = (req as RequestWithUser).userEmail
+    if (!userEmail) {
+      return res.status(400).json({
+        message: 'Not user associated with this operation'
+      })
+    }
+
     const orderId = Number(req.params.id) // Convert to number
     const orderData = req.body
 
@@ -163,12 +179,13 @@ const updateItems = async (req: Request, res: Response) => {
       })
     }
 
-    const responseItem = await updateOrder(orderId, orderData)
+    const responseItem = await updateOrder(orderId, orderData, userEmail)
 
     res.status(200).json(responseItem)
   } catch (error: unknown) {
     if (error instanceof Error) {
       const errorMap: Record<string, number> = {
+        USER_NOT_FOUND: 404,
         ORDER_NOT_FOUND: 404,
         ORDER_INSERT_ERROR: 500,
         ORDER_RETRIEVE_ERROR: 500,
@@ -190,19 +207,27 @@ const updateItems = async (req: Request, res: Response) => {
 
 const removeItems = async (req: Request, res: Response) => {
   try {
+    const userEmail = (req as RequestWithUser).userEmail
+    if (!userEmail) {
+      return res.status(400).json({
+        message: 'Not user associated with this operation'
+      })
+    }
+
     const orderId = Number(req.params.id)
 
     if (isNaN(orderId)) {
       return handleHttp(res, 'Invalid order ID format.', 400)
     }
 
-    await deleteOrder(orderId)
+    await deleteOrder(orderId, userEmail)
     res
       .status(200)
       .json({ success: true, message: 'Order deleted successfully.' })
   } catch (error: unknown) {
     if (error instanceof Error) {
       const errorMap: Record<string, number> = {
+        USER_NOT_FOUND: 404,
         ORDER_NOT_FOUND: 404,
         DELETE_ERROR: 500
       }

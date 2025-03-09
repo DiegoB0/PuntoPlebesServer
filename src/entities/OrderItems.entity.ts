@@ -32,7 +32,8 @@ export class OrderItem {
 
   @OneToMany(
     () => OrderItemDetail,
-    (orderItemDetail) => orderItemDetail.orderItem
+    (orderItemDetail) => orderItemDetail.orderItem,
+    { nullable: true }
   )
   orderItemDetails: OrderItemDetail[]
 

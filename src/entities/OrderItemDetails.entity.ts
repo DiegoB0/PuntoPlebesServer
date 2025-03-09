@@ -1,5 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, Column } from 'typeorm'
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  ManyToMany,
+  JoinTable
+} from 'typeorm'
 import { OrderItem } from './OrderItems.entity'
+import { Modificador } from './Modificadores.entity'
 
 @Entity('order_item_details')
 export class OrderItemDetail {
@@ -12,6 +19,11 @@ export class OrderItemDetail {
   })
   orderItem: OrderItem
 
-  @Column('simple-array')
-  details: string[]
+  @ManyToMany(() => Modificador)
+  @JoinTable({
+    name: 'details',
+    joinColumn: { name: 'order_item_detail_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'modificador_id', referencedColumnName: 'id' }
+  })
+  details: Modificador[]
 }

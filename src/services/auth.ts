@@ -35,9 +35,16 @@ const loginUser = async (loginData: LoginUserDTO) => {
     const token = await generateToken(existingUser.email)
     const refreshToken = await generateRereshToken(existingUser.email)
 
+    const user = {
+      user_email: existingUser.email,
+      user_role: existingUser.role
+    }
+
+    console.log(user)
+
     // Return success response with tokens
     return {
-      existingUser,
+      user,
       token,
       refreshToken,
       message: 'Sign in success'

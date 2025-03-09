@@ -1,6 +1,10 @@
 import { NextFunction, Request, Response } from 'express'
 import { verifyToken } from '../utils/jwt.handler'
 
+export interface RequestWithUser extends Request {
+  userEmail?: string
+}
+
 const checkJwt = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization
@@ -21,14 +25,16 @@ const checkJwt = async (req: Request, res: Response, next: NextFunction) => {
         .json({ error: 'INVALID_TOKEN', message: 'Token format is invalid' })
     }
 
-    const isCorrect = verifyToken(jwt)
+    const userData = verifyToken(jwt)
 
-    if (!isCorrect) {
+    if (!userData) {
       return res.status(401).json({
         error: 'INVALID_SESSION',
         message: 'The provided token is invalid'
       })
     }
+
+    ;(req as RequestWithUser).userEmail = userData.email
 
     next()
   } catch (e) {
