@@ -52,7 +52,6 @@ const insertMeal = async (mealData: InsertMealDTO, userEmail: string) => {
     // Save meal with the associated clave
     await mealRepo.save(newMeal)
 
-
     const actionUser = await userRepo.findOne({ where: { email: userEmail } })
 
     if (!actionUser) {
@@ -123,7 +122,11 @@ const getMeal = async (id: number) => {
   }
 }
 
-const updateMeal = async (id: number, mealData: UpdateMealDTO, userEmail: string) => {
+const updateMeal = async (
+  id: number,
+  mealData: UpdateMealDTO,
+  userEmail: string
+) => {
   try {
     // Check if category exists
     const category = mealData.categoryId
@@ -212,7 +215,11 @@ const updateMeal = async (id: number, mealData: UpdateMealDTO, userEmail: string
     }
 
     //Logs
-    createLog(actionUser, `Actualizo la comida con el ID: ${id}`, ActionType.Update)
+    createLog(
+      actionUser,
+      `Actualizo la comida con el ID: ${id}`,
+      ActionType.Update
+    )
 
     return updatedMeal
   } catch (error: unknown) {
@@ -248,7 +255,6 @@ const deleteMeal = async (id: number, userEmail: string) => {
     // Delete the meal itself
     await mealRepo.delete(id)
 
-
     const actionUser = await userRepo.findOne({ where: { email: userEmail } })
 
     if (!actionUser) {
@@ -256,7 +262,11 @@ const deleteMeal = async (id: number, userEmail: string) => {
     }
 
     //Logs
-    createLog(actionUser, `Elimino la comida con el ID: ${id}`, ActionType.Delete)
+    createLog(
+      actionUser,
+      `Elimino la comida con el ID: ${id}`,
+      ActionType.Delete
+    )
 
     return { success: true, message: 'Meal deleted successfully' }
   } catch (error: unknown) {

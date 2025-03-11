@@ -15,7 +15,6 @@ const addItems = async (req: Request, res: Response) => {
   try {
     let mealData = req.body
 
-
     const userEmail = (req as RequestWithUser).userEmail
     if (!userEmail) {
       return res.status(400).json({
@@ -108,7 +107,6 @@ const getItem = async ({ params }: Request, res: Response) => {
 
 const updateItems = async (req: Request, res: Response) => {
   try {
-
     const userEmail = (req as RequestWithUser).userEmail
     if (!userEmail) {
       return res.status(400).json({
@@ -158,7 +156,6 @@ const updateItems = async (req: Request, res: Response) => {
 
 const removeItem = async (req: Request, res: Response) => {
   try {
-
     const userEmail = (req as RequestWithUser).userEmail
     if (!userEmail) {
       return res.status(400).json({

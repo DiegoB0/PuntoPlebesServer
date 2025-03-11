@@ -54,7 +54,6 @@ const getItem = async ({ params }: Request, res: Response) => {
 
 const updateItems = async (req: Request, res: Response) => {
   try {
-
     const userEmail = (req as RequestWithUser).userEmail
     if (!userEmail) {
       return res.status(400).json({
@@ -76,7 +75,6 @@ const updateItems = async (req: Request, res: Response) => {
 
 const removeItems = async (req: Request, res: Response) => {
   try {
-
     const userEmail = (req as RequestWithUser).userEmail
     if (!userEmail) {
       return res.status(400).json({

@@ -8,7 +8,10 @@ import { ActionType } from '../entities/enums/ActionType.enum'
 
 const userRepo: Repository<User> = AppDataSource.getRepository(User)
 
-const insertUser = async ({ email, password, name, role }: Partial<User>, userEmail: string) => {
+const insertUser = async (
+  { email, password, name, role }: Partial<User>,
+  userEmail: string
+) => {
   try {
     if (!password) {
       throw new Error('PASSWORD_REQUIRED')
@@ -30,7 +33,6 @@ const insertUser = async ({ email, password, name, role }: Partial<User>, userEm
 
     // Insert the new user
     await userRepo.save(user)
-
 
     const actionUser = await userRepo.findOne({ where: { email: userEmail } })
 
@@ -78,7 +80,11 @@ const getUserById = async (id: number) => {
   }
 }
 
-const updateUser = async (id: number, user: Partial<User>, userEmail: string) => {
+const updateUser = async (
+  id: number,
+  user: Partial<User>,
+  userEmail: string
+) => {
   try {
     const existingUser = await userRepo.findOne({ where: { id } })
 
@@ -88,7 +94,6 @@ const updateUser = async (id: number, user: Partial<User>, userEmail: string) =>
 
     await userRepo.update(id, user)
 
-
     const actionUser = await userRepo.findOne({ where: { email: userEmail } })
 
     if (!actionUser) {
@@ -96,7 +101,11 @@ const updateUser = async (id: number, user: Partial<User>, userEmail: string) =>
     }
 
     //Logs
-    createLog(actionUser, `Actualizo al usuario con el ID: ${id}`, ActionType.Update)
+    createLog(
+      actionUser,
+      `Actualizo al usuario con el ID: ${id}`,
+      ActionType.Update
+    )
 
     return { message: 'User updated successfully' }
   } catch (error) {
@@ -106,7 +115,6 @@ const updateUser = async (id: number, user: Partial<User>, userEmail: string) =>
 
 const deleteUser = async (id: number, userEmail: string) => {
   try {
-
     const existingUser = await userRepo.findOne({ where: { id } })
 
     if (!existingUser) {
@@ -116,7 +124,6 @@ const deleteUser = async (id: number, userEmail: string) => {
     // Delete the user
     await userRepo.remove(existingUser)
 
-
     const actionUser = await userRepo.findOne({ where: { email: userEmail } })
 
     if (!actionUser) {
@@ -124,7 +131,11 @@ const deleteUser = async (id: number, userEmail: string) => {
     }
 
     //Logs
-    createLog(actionUser, `Elimino al usuario con el ID: ${id}`, ActionType.Update)
+    createLog(
+      actionUser,
+      `Elimino al usuario con el ID: ${id}`,
+      ActionType.Update
+    )
 
     return { message: 'User deleted successfully' }
   } catch (error) {

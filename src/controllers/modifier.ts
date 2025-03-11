@@ -57,7 +57,6 @@ const getItem = async ({ params }: Request, res: Response) => {
 
 const updateItems = async (req: Request, res: Response) => {
   try {
-
     const { body, params } = req
 
     const userEmail = (req as RequestWithUser).userEmail
@@ -71,7 +70,11 @@ const updateItems = async (req: Request, res: Response) => {
     const errors = await validate(updateModifierData)
     if (errors.length > 0) return res.status(400).json({ errors })
 
-    const updatedModifier = await updateModifier(Number(params.id), body, userEmail)
+    const updatedModifier = await updateModifier(
+      Number(params.id),
+      body,
+      userEmail
+    )
     res.status(200).json(updatedModifier)
   } catch (e: any) {
     handleHttp(res, e.message, e.statusCode || 500, e)
@@ -80,7 +83,6 @@ const updateItems = async (req: Request, res: Response) => {
 
 const removeItems = async (req: Request, res: Response) => {
   try {
-
     const { params } = req
 
     const userEmail = (req as RequestWithUser).userEmail

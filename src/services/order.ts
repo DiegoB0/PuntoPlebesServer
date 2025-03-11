@@ -389,7 +389,11 @@ const updateOrder = async (
     redis.del('orders')
 
     // Log for logs table
-    createLog(user, `Modifico la orden con el ID: ${orderId}`, ActionType.Update)
+    createLog(
+      user,
+      `Modifico la orden con el ID: ${orderId}`,
+      ActionType.Update
+    )
 
     return {
       message: 'Order updated successfully',

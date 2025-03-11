@@ -73,7 +73,6 @@ const updateItems = async (req: Request, res: Response) => {
 
 const removeItems = async (req: Request, res: Response) => {
   try {
-
     const { params } = req
     const userEmail = (req as RequestWithUser).userEmail
     if (!userEmail) {

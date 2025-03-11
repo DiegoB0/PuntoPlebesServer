@@ -15,15 +15,18 @@ const claveRepo: Repository<Clave> = AppDataSource.getRepository(Clave)
 const categoryRepo: Repository<Category> = AppDataSource.getRepository(Category)
 const userRepo: Repository<User> = AppDataSource.getRepository(User)
 
-const insertModifier = async ({
-  name,
-  description,
-  meal_type,
-  claveData,
-  hasPrice,
-  price,
-  categoryIds
-}: any, userEmail: string) => {
+const insertModifier = async (
+  {
+    name,
+    description,
+    meal_type,
+    claveData,
+    hasPrice,
+    price,
+    categoryIds
+  }: any,
+  userEmail: string
+) => {
   try {
     if (!Object.values(Menu).includes(meal_type)) {
       throw new Error('INVALID_MEAL_TYPE')
@@ -59,7 +62,6 @@ const insertModifier = async ({
     })
 
     await modificadorRepo.save(modificador)
-
 
     const actionUser = await userRepo.findOne({ where: { email: userEmail } })
 
@@ -101,7 +103,11 @@ const getModifierById = async (id: number) => {
   }
 }
 
-const updateModifier = async (id: number, updateData: any, userEmail: string) => {
+const updateModifier = async (
+  id: number,
+  updateData: any,
+  userEmail: string
+) => {
   try {
     const modificador = await modificadorRepo.findOne({
       where: { id },
@@ -119,7 +125,6 @@ const updateModifier = async (id: number, updateData: any, userEmail: string) =>
     modificadorRepo.merge(modificador, updateData)
     await modificadorRepo.save(modificador)
 
-
     const actionUser = await userRepo.findOne({ where: { email: userEmail } })
 
     if (!actionUser) {
@@ -127,7 +132,11 @@ const updateModifier = async (id: number, updateData: any, userEmail: string) =>
     }
 
     //Logs
-    createLog(actionUser, `Actualizo el modificador con el id ${id}`, ActionType.Update)
+    createLog(
+      actionUser,
+      `Actualizo el modificador con el id ${id}`,
+      ActionType.Update
+    )
 
     return { message: 'Modificador updated successfully' }
   } catch (error) {
@@ -149,7 +158,6 @@ const deleteModifier = async (id: number, userEmail: string) => {
 
     await modificadorRepo.remove(modificador)
 
-
     const actionUser = await userRepo.findOne({ where: { email: userEmail } })
 
     if (!actionUser) {
@@ -157,7 +165,11 @@ const deleteModifier = async (id: number, userEmail: string) => {
     }
 
     //Logs
-    createLog(actionUser, `Elimino el modificador con el ID: ${id}`, ActionType.Delete)
+    createLog(
+      actionUser,
+      `Elimino el modificador con el ID: ${id}`,
+      ActionType.Delete
+    )
 
     return { message: 'Modificador deleted successfully' }
   } catch (error) {

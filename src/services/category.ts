@@ -24,7 +24,6 @@ const insertCategory = async (categoryData: Category, userEmail: string) => {
       throw new Error('NO_ITEM_FOUND')
     }
 
-
     const actionUser = await userRepo.findOne({ where: { email: userEmail } })
 
     if (!actionUser) {
@@ -90,7 +89,11 @@ const getCategory = async (id: number) => {
   }
 }
 
-const updateCategory = async (id: number, categoryData: Category, userEmail: string) => {
+const updateCategory = async (
+  id: number,
+  categoryData: Category,
+  userEmail: string
+) => {
   try {
     // Find the category by ID
     const category = await categoryRepo.findOne({
@@ -114,7 +117,6 @@ const updateCategory = async (id: number, categoryData: Category, userEmail: str
       message: 'Category updated successfully'
     }
 
-
     const actionUser = await userRepo.findOne({ where: { email: userEmail } })
 
     if (!actionUser) {
@@ -122,7 +124,11 @@ const updateCategory = async (id: number, categoryData: Category, userEmail: str
     }
 
     //Logs
-    createLog(actionUser, `Actualizo la categoria con el ID: ${id}`, ActionType.Update)
+    createLog(
+      actionUser,
+      `Actualizo la categoria con el ID: ${id}`,
+      ActionType.Update
+    )
 
     return responseData
   } catch (error: unknown) {
@@ -150,7 +156,6 @@ const deleteCategory = async (id: number, userEmail: string) => {
     // Delete the category
     await categoryRepo.delete(id)
 
-
     const actionUser = await userRepo.findOne({ where: { email: userEmail } })
 
     if (!actionUser) {
@@ -158,7 +163,11 @@ const deleteCategory = async (id: number, userEmail: string) => {
     }
 
     //Logs
-    createLog(actionUser, `Elimino la categoria con el ID: ${id}`, ActionType.Delete)
+    createLog(
+      actionUser,
+      `Elimino la categoria con el ID: ${id}`,
+      ActionType.Delete
+    )
 
     return true // Return true if deletion was successful
   } catch (error: unknown) {

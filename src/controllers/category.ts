@@ -109,7 +109,11 @@ const updateItems = async (req: Request, res: Response) => {
       return res.status(400).json({ errors })
     }
 
-    const updatedCategory = await updateCategory(Number(params.id), body, userEmail)
+    const updatedCategory = await updateCategory(
+      Number(params.id),
+      body,
+      userEmail
+    )
     res.status(200).json(updatedCategory)
   } catch (err: any) {
     if (err instanceof Error) {
@@ -129,7 +133,6 @@ const updateItems = async (req: Request, res: Response) => {
 
 const removeItems = async (req: Request, res: Response) => {
   try {
-
     const userEmail = (req as RequestWithUser).userEmail
     if (!userEmail) {
       return res.status(400).json({

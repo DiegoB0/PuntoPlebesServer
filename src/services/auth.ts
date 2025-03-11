@@ -60,13 +60,21 @@ const loginUser = async (loginData: LoginUserDTO) => {
   }
 }
 
-const createApiKey = async (loginData: LoginUserDTO, userEmail: string): Promise<APIKey> => {
+const createApiKey = async (
+  loginData: LoginUserDTO,
+  userEmail: string
+): Promise<APIKey> => {
   // Find user by email
   const existingUser = await userRepo.findOne({
-    where: { email: loginData.email }
+    where: { email: loginData.email },
+    relations: ['apiKeys']
   })
   if (!existingUser) {
     throw new Error('USER_NOT_FOUND')
+  }
+
+  if (existingUser.apiKeys && existingUser.apiKeys.length > 0) {
+    throw new Error('USER_ALREADY_CREATED_ONE')
   }
 
   // Verify password
@@ -82,7 +90,6 @@ const createApiKey = async (loginData: LoginUserDTO, userEmail: string): Promise
 
   // Save API key to database
   await apiKeyRepo.save(newApiKey)
-
 
   const actionUser = await userRepo.findOne({ where: { email: userEmail } })
 

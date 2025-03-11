@@ -25,15 +25,15 @@ const loginController = async (req: Request, res: Response) => {
     if (e instanceof Error) {
       // Error handling based on custom error messages
       const errorMap: Record<string, { message: string; statusCode: number }> =
-      {
-        USER_NOT_FOUND: { message: 'User not found', statusCode: 404 },
-        INVALID_EMAIL: { message: 'Invalid email format', statusCode: 400 },
-        INCORRECT_PASSWORD: {
-          message: 'Incorrect password',
-          statusCode: 401
-        },
-        UNKNOWN_ERROR: { message: 'Internal server error', statusCode: 500 }
-      }
+        {
+          USER_NOT_FOUND: { message: 'User not found', statusCode: 404 },
+          INVALID_EMAIL: { message: 'Invalid email format', statusCode: 400 },
+          INCORRECT_PASSWORD: {
+            message: 'Incorrect password',
+            statusCode: 401
+          },
+          UNKNOWN_ERROR: { message: 'Internal server error', statusCode: 500 }
+        }
 
       const error = errorMap[e.message] || {
         message: 'Internal server error',
@@ -101,6 +101,7 @@ const createApiKeyController = async (req: Request, res: Response) => {
   } catch (e: any) {
     if (e instanceof Error) {
       const errorMap: Record<string, number> = {
+        USER_ALREADY_CREATED_ONE: 409,
         USER_NOT_FOUND: 404,
         INCORRECT_PASSWORD: 401,
         API_KEY_GENERATION_ERROR: 500,

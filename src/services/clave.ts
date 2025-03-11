@@ -9,13 +9,16 @@ import { ActionType } from '../entities/enums/ActionType.enum'
 const claveRepo: Repository<Clave> = AppDataSource.getRepository(Clave)
 const userRepo: Repository<User> = AppDataSource.getRepository(User)
 
-const insertClave = async ({
-  palabra,
-  clave
-}: {
-  palabra: string
-  clave: string
-}, userEmail: string) => {
+const insertClave = async (
+  {
+    palabra,
+    clave
+  }: {
+    palabra: string
+    clave: string
+  },
+  userEmail: string
+) => {
   try {
     const newClave = claveRepo.create({
       palabra,
@@ -24,7 +27,6 @@ const insertClave = async ({
     })
 
     await claveRepo.save(newClave)
-
 
     const actionUser = await userRepo.findOne({ where: { email: userEmail } })
 
@@ -63,14 +65,17 @@ const getClaveById = async (id: number) => {
   }
 }
 
-const updateClave = async (id: number, updateData: Partial<Clave>, userEmail: string) => {
+const updateClave = async (
+  id: number,
+  updateData: Partial<Clave>,
+  userEmail: string
+) => {
   try {
     const clave = await claveRepo.findOne({ where: { id } })
     if (!clave) throw new Error('CLAVE_NOT_FOUND')
 
     claveRepo.merge(clave, updateData)
     await claveRepo.save(clave)
-
 
     const actionUser = await userRepo.findOne({ where: { email: userEmail } })
 
@@ -79,7 +84,11 @@ const updateClave = async (id: number, updateData: Partial<Clave>, userEmail: st
     }
 
     //Logs
-    createLog(actionUser, `Actualizo la clave con el ID: ${id}`, ActionType.Update)
+    createLog(
+      actionUser,
+      `Actualizo la clave con el ID: ${id}`,
+      ActionType.Update
+    )
 
     return { message: 'Clave updated successfully' }
   } catch (error) {
@@ -94,7 +103,6 @@ const deleteClave = async (id: number, userEmail: string) => {
 
     await claveRepo.remove(clave)
 
-
     const actionUser = await userRepo.findOne({ where: { email: userEmail } })
 
     if (!actionUser) {
@@ -102,7 +110,11 @@ const deleteClave = async (id: number, userEmail: string) => {
     }
 
     //Logs
-    createLog(actionUser, `Elimino la clave con el ID: ${id}`, ActionType.Delete)
+    createLog(
+      actionUser,
+      `Elimino la clave con el ID: ${id}`,
+      ActionType.Delete
+    )
 
     return { message: 'Clave deleted successfully' }
   } catch (error) {
