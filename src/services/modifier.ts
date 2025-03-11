@@ -66,7 +66,9 @@ const insertModifier = async (
 
 const getModifiers = async () => {
   try {
-    const modificadores = await modificadorRepo.find({ relations: ['clave'] })
+    const modificadores = await modificadorRepo.find({
+      relations: ['clave', 'categories']
+    })
     if (!modificadores.length) throw new Error('NO_MODIFICADORES_FOUND')
 
     return modificadores
@@ -79,7 +81,7 @@ const getModifierById = async (id: number) => {
   try {
     const modificador = await modificadorRepo.findOne({
       where: { id },
-      relations: ['clave']
+      relations: ['clave', 'categories']
     })
     if (!modificador) throw new Error('MODIFICADOR_NOT_FOUND')
 
