@@ -12,6 +12,7 @@ import { APIKey } from '../entities/ApiKey.entity'
 import { LoginUserDTO } from '../dtos/auth/request.dto'
 import { createLog } from './log'
 import { ActionType } from '../entities/enums/ActionType.enum'
+import { Role } from '../entities/enums/Role.enum'
 
 const apiKeyRepo: Repository<APIKey> = AppDataSource.getRepository(APIKey)
 const userRepo: Repository<User> = AppDataSource.getRepository(User)
@@ -75,6 +76,10 @@ const createApiKey = async (
 
   if (existingUser.apiKeys && existingUser.apiKeys.length > 0) {
     throw new Error('USER_ALREADY_CREATED_ONE')
+  }
+
+  if (existingUser.role !== Role.Admin) {
+    throw new Error('NOT_VALID_ROLE')
   }
 
   // Verify password

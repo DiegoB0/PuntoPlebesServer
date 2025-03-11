@@ -101,6 +101,7 @@ const createApiKeyController = async (req: Request, res: Response) => {
   } catch (e: any) {
     if (e instanceof Error) {
       const errorMap: Record<string, number> = {
+        NOT_VALID_ROLE: 401,
         USER_ALREADY_CREATED_ONE: 409,
         USER_NOT_FOUND: 404,
         INCORRECT_PASSWORD: 401,
