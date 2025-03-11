@@ -24,8 +24,8 @@ const verifyToken = (jwt: string) => {
   }
 }
 
-const generateRereshToken = async (id: string) => {
-  const refreshJwt = sign({ id }, JWT_REFRESH_SECRET, {
+const generateRereshToken = async (email: string) => {
+  const refreshJwt = sign({ email }, JWT_REFRESH_SECRET, {
     expiresIn: '7d'
   })
   return refreshJwt

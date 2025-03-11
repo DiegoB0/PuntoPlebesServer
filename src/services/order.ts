@@ -301,6 +301,7 @@ const updateOrder = async (
     // Update order properties with the new data (only if the data exists)
     if (orderData.order_status) {
       order.order_status = orderData.order_status
+      order.delivered_at = new Date()
     }
     if (orderData.client_name) {
       order.client_name = orderData.client_name
