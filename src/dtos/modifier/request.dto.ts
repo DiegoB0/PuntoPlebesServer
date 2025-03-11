@@ -51,15 +51,19 @@ export class UpdateModifierDTO {
   @IsString()
   description?: string
 
+  @IsOptional()
   @IsArray()
   categoryIds: []
 
+  @IsOptional()
   @IsBoolean()
   hasPrice: boolean
 
+  @IsOptional()
   @IsNumber()
   price: number
 
+  @IsOptional()
   @ValidateNested()
   @Type(() => ClaveDTO)
   claveData: ClaveDTO
