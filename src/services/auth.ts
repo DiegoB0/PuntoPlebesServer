@@ -10,6 +10,8 @@ import { Repository } from 'typeorm'
 import { v4 as uuidv4 } from 'uuid'
 import { APIKey } from '../entities/ApiKey.entity'
 import { LoginUserDTO } from '../dtos/auth/request.dto'
+import { createLog } from './log'
+import { ActionType } from '../entities/enums/ActionType.enum'
 
 const apiKeyRepo: Repository<APIKey> = AppDataSource.getRepository(APIKey)
 const userRepo: Repository<User> = AppDataSource.getRepository(User)
@@ -58,7 +60,7 @@ const loginUser = async (loginData: LoginUserDTO) => {
   }
 }
 
-const createApiKey = async (loginData: LoginUserDTO): Promise<APIKey> => {
+const createApiKey = async (loginData: LoginUserDTO, userEmail: string): Promise<APIKey> => {
   // Find user by email
   const existingUser = await userRepo.findOne({
     where: { email: loginData.email }
@@ -80,6 +82,16 @@ const createApiKey = async (loginData: LoginUserDTO): Promise<APIKey> => {
 
   // Save API key to database
   await apiKeyRepo.save(newApiKey)
+
+
+  const actionUser = await userRepo.findOne({ where: { email: userEmail } })
+
+  if (!actionUser) {
+    throw new Error('USER_NOT_FOUND')
+  }
+
+  //Logs
+  createLog(actionUser, `Creo una nueva API KEY`, ActionType.Create)
 
   return newApiKey
 }

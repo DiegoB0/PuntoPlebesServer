@@ -389,7 +389,7 @@ const updateOrder = async (
     redis.del('orders')
 
     // Log for logs table
-    createLog(user, 'Modifico una orden', ActionType.Update)
+    createLog(user, `Modifico la orden con el ID: ${orderId}`, ActionType.Update)
 
     return {
       message: 'Order updated successfully',
@@ -430,7 +430,7 @@ const deleteOrder = async (
     await redis.del('orders') // Invalidate cached orders list
 
     // Log for logs table
-    createLog(user, 'Elimino una orden', ActionType.Delete)
+    createLog(user, `Elimino la orden con el ID: ${orderId}`, ActionType.Delete)
 
     console.log(`Order ${orderId} deleted successfully`)
   } catch (error) {

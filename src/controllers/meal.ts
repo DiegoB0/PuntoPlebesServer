@@ -9,10 +9,19 @@ import {
 import { handleHttp } from '../utils/error_handler'
 import { uploadImage } from '../utils/cloudinary'
 import fs from 'fs-extra'
+import { RequestWithUser } from '../middlewares/sessions'
 
 const addItems = async (req: Request, res: Response) => {
   try {
     let mealData = req.body
+
+
+    const userEmail = (req as RequestWithUser).userEmail
+    if (!userEmail) {
+      return res.status(400).json({
+        message: 'Not user associated with this operation'
+      })
+    }
 
     if (mealData.isClaveApplied) {
       mealData.isClaveApplied =
@@ -38,7 +47,7 @@ const addItems = async (req: Request, res: Response) => {
       }
     }
 
-    const newMeal = await insertMeal(mealData)
+    const newMeal = await insertMeal(mealData, userEmail)
     res.status(201).json(newMeal)
   } catch (e: any) {
     if (e instanceof Error) {
@@ -99,6 +108,14 @@ const getItem = async ({ params }: Request, res: Response) => {
 
 const updateItems = async (req: Request, res: Response) => {
   try {
+
+    const userEmail = (req as RequestWithUser).userEmail
+    if (!userEmail) {
+      return res.status(400).json({
+        message: 'Not user associated with this operation'
+      })
+    }
+
     let mealData = req.body
 
     const itemId = Number(req.params.id)
@@ -121,7 +138,7 @@ const updateItems = async (req: Request, res: Response) => {
 
     // Validate DTO
 
-    const updatedMeal = await updateMeal(itemId, mealData)
+    const updatedMeal = await updateMeal(itemId, mealData, userEmail)
     res.status(200).json(updatedMeal)
   } catch (e: any) {
     if (e instanceof Error) {
@@ -141,9 +158,17 @@ const updateItems = async (req: Request, res: Response) => {
 
 const removeItem = async (req: Request, res: Response) => {
   try {
+
+    const userEmail = (req as RequestWithUser).userEmail
+    if (!userEmail) {
+      return res.status(400).json({
+        message: 'Not user associated with this operation'
+      })
+    }
+
     const itemId = Number(req.params.id)
 
-    const { message } = await deleteMeal(itemId)
+    const { message } = await deleteMeal(itemId, userEmail)
     res.status(200).json(message)
   } catch (e: any) {
     if (e instanceof Error) {

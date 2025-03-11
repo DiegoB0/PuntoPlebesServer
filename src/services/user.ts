@@ -3,10 +3,12 @@ import { User } from '../entities/User.entity'
 import { Repository } from 'typeorm'
 import { encrypt } from '../utils/bcrypt_handler'
 import { Role } from '../entities/enums/Role.enum'
+import { createLog } from './log'
+import { ActionType } from '../entities/enums/ActionType.enum'
 
 const userRepo: Repository<User> = AppDataSource.getRepository(User)
 
-const insertUser = async ({ email, password, name, role }: Partial<User>) => {
+const insertUser = async ({ email, password, name, role }: Partial<User>, userEmail: string) => {
   try {
     if (!password) {
       throw new Error('PASSWORD_REQUIRED')
@@ -28,6 +30,16 @@ const insertUser = async ({ email, password, name, role }: Partial<User>) => {
 
     // Insert the new user
     await userRepo.save(user)
+
+
+    const actionUser = await userRepo.findOne({ where: { email: userEmail } })
+
+    if (!actionUser) {
+      throw new Error('USER_NOT_FOUND')
+    }
+
+    //Logs
+    createLog(actionUser, 'Creo un nuevo usuario', ActionType.Create)
 
     return { message: 'User inserted successfully' }
   } catch (error) {
@@ -66,7 +78,7 @@ const getUserById = async (id: number) => {
   }
 }
 
-const updateUser = async (id: number, user: Partial<User>) => {
+const updateUser = async (id: number, user: Partial<User>, userEmail: string) => {
   try {
     const existingUser = await userRepo.findOne({ where: { id } })
 
@@ -76,14 +88,25 @@ const updateUser = async (id: number, user: Partial<User>) => {
 
     await userRepo.update(id, user)
 
+
+    const actionUser = await userRepo.findOne({ where: { email: userEmail } })
+
+    if (!actionUser) {
+      throw new Error('USER_NOT_FOUND')
+    }
+
+    //Logs
+    createLog(actionUser, `Actualizo al usuario con el ID: ${id}`, ActionType.Update)
+
     return { message: 'User updated successfully' }
   } catch (error) {
     throw error instanceof Error ? error : new Error('UNKNOWN_ERROR')
   }
 }
 
-const deleteUser = async (id: number) => {
+const deleteUser = async (id: number, userEmail: string) => {
   try {
+
     const existingUser = await userRepo.findOne({ where: { id } })
 
     if (!existingUser) {
@@ -92,6 +115,16 @@ const deleteUser = async (id: number) => {
 
     // Delete the user
     await userRepo.remove(existingUser)
+
+
+    const actionUser = await userRepo.findOne({ where: { email: userEmail } })
+
+    if (!actionUser) {
+      throw new Error('USER_NOT_FOUND')
+    }
+
+    //Logs
+    createLog(actionUser, `Elimino al usuario con el ID: ${id}`, ActionType.Update)
 
     return { message: 'User deleted successfully' }
   } catch (error) {

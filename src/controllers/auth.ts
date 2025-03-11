@@ -4,6 +4,7 @@ import { handleHttp } from '../utils/error_handler'
 import { LoginUserDTO } from '../dtos/auth/request.dto'
 import { plainToInstance } from 'class-transformer'
 import { validate } from 'class-validator'
+import { RequestWithUser } from '../middlewares/sessions'
 
 const loginController = async (req: Request, res: Response) => {
   try {
@@ -24,15 +25,15 @@ const loginController = async (req: Request, res: Response) => {
     if (e instanceof Error) {
       // Error handling based on custom error messages
       const errorMap: Record<string, { message: string; statusCode: number }> =
-        {
-          USER_NOT_FOUND: { message: 'User not found', statusCode: 404 },
-          INVALID_EMAIL: { message: 'Invalid email format', statusCode: 400 },
-          INCORRECT_PASSWORD: {
-            message: 'Incorrect password',
-            statusCode: 401
-          },
-          UNKNOWN_ERROR: { message: 'Internal server error', statusCode: 500 }
-        }
+      {
+        USER_NOT_FOUND: { message: 'User not found', statusCode: 404 },
+        INVALID_EMAIL: { message: 'Invalid email format', statusCode: 400 },
+        INCORRECT_PASSWORD: {
+          message: 'Incorrect password',
+          statusCode: 401
+        },
+        UNKNOWN_ERROR: { message: 'Internal server error', statusCode: 500 }
+      }
 
       const error = errorMap[e.message] || {
         message: 'Internal server error',
@@ -79,6 +80,13 @@ const refreshTokenController = async (req: any, res: any) => {
 
 const createApiKeyController = async (req: Request, res: Response) => {
   try {
+    const userEmail = (req as RequestWithUser).userEmail
+    if (!userEmail) {
+      return res.status(400).json({
+        message: 'Not user associated with this operation'
+      })
+    }
+
     const loginData = plainToInstance(LoginUserDTO, req.body)
 
     // Validate request data
@@ -87,7 +95,7 @@ const createApiKeyController = async (req: Request, res: Response) => {
       return res.status(400).json({ errors })
     }
 
-    const apiKey = await createApiKey(loginData)
+    const apiKey = await createApiKey(loginData, userEmail)
 
     return res.status(201).json({ apiKey: apiKey.key })
   } catch (e: any) {

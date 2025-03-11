@@ -63,6 +63,7 @@
     "nodemon": "^3.1.0",
     "prettier": "3.2.5",
     "supabase": "^2.2.1",
+    "ts-node": "^10.9.2",
     "typescript-eslint": "^8.11.0"
   },
   "husky": {

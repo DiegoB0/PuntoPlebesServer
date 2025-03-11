@@ -6,13 +6,17 @@ import { deleteImage } from '../utils/cloudinary'
 import { Repository } from 'typeorm'
 import { TipoClave } from '../entities/enums/Clave.enum'
 import { InsertMealDTO, UpdateMealDTO } from '../dtos/meal/request.dto'
+import { createLog } from './log'
+import { User } from '../entities/User.entity'
+import { ActionType } from '../entities/enums/ActionType.enum'
 
 // Repositories
 const mealRepo: Repository<Meal> = AppDataSource.getRepository(Meal)
 const categoryRepo: Repository<Category> = AppDataSource.getRepository(Category)
 const claveRepo: Repository<Clave> = AppDataSource.getRepository(Clave)
+const userRepo: Repository<User> = AppDataSource.getRepository(User)
 
-const insertMeal = async (mealData: InsertMealDTO) => {
+const insertMeal = async (mealData: InsertMealDTO, userEmail: string) => {
   try {
     console.log(mealData)
     // Check if category exists
@@ -47,6 +51,16 @@ const insertMeal = async (mealData: InsertMealDTO) => {
 
     // Save meal with the associated clave
     await mealRepo.save(newMeal)
+
+
+    const actionUser = await userRepo.findOne({ where: { email: userEmail } })
+
+    if (!actionUser) {
+      throw new Error('USER_NOT_FOUND')
+    }
+
+    //Logs
+    createLog(actionUser, 'Creo una nueva comida', ActionType.Create)
 
     return {
       meal: newMeal,
@@ -109,7 +123,7 @@ const getMeal = async (id: number) => {
   }
 }
 
-const updateMeal = async (id: number, mealData: UpdateMealDTO) => {
+const updateMeal = async (id: number, mealData: UpdateMealDTO, userEmail: string) => {
   try {
     // Check if category exists
     const category = mealData.categoryId
@@ -191,6 +205,15 @@ const updateMeal = async (id: number, mealData: UpdateMealDTO) => {
     // Save the updated meal
     const updatedMeal = await mealRepo.save(existingMeal)
 
+    const actionUser = await userRepo.findOne({ where: { email: userEmail } })
+
+    if (!actionUser) {
+      throw new Error('USER_NOT_FOUND')
+    }
+
+    //Logs
+    createLog(actionUser, `Actualizo la comida con el ID: ${id}`, ActionType.Update)
+
     return updatedMeal
   } catch (error: unknown) {
     if (error instanceof Error) {
@@ -203,7 +226,7 @@ const updateMeal = async (id: number, mealData: UpdateMealDTO) => {
   }
 }
 
-const deleteMeal = async (id: number) => {
+const deleteMeal = async (id: number, userEmail: string) => {
   try {
     const existingMeal = await mealRepo.findOne({
       where: { id },
@@ -224,6 +247,16 @@ const deleteMeal = async (id: number) => {
 
     // Delete the meal itself
     await mealRepo.delete(id)
+
+
+    const actionUser = await userRepo.findOne({ where: { email: userEmail } })
+
+    if (!actionUser) {
+      throw new Error('USER_NOT_FOUND')
+    }
+
+    //Logs
+    createLog(actionUser, `Elimino la comida con el ID: ${id}`, ActionType.Delete)
 
     return { success: true, message: 'Meal deleted successfully' }
   } catch (error: unknown) {

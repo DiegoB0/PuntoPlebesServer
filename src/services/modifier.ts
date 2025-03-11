@@ -5,11 +5,15 @@ import { Clave } from '../entities/Claves.entity'
 import { TipoClave } from '../entities/enums/Clave.enum'
 import { Menu } from '../entities/enums/Menu.enum'
 import { Category } from '../entities/Categories.entity'
+import { createLog } from './log'
+import { User } from '../entities/User.entity'
+import { ActionType } from '../entities/enums/ActionType.enum'
 
 const modificadorRepo: Repository<Modificador> =
   AppDataSource.getRepository(Modificador)
 const claveRepo: Repository<Clave> = AppDataSource.getRepository(Clave)
 const categoryRepo: Repository<Category> = AppDataSource.getRepository(Category)
+const userRepo: Repository<User> = AppDataSource.getRepository(User)
 
 const insertModifier = async ({
   name,
@@ -19,7 +23,7 @@ const insertModifier = async ({
   hasPrice,
   price,
   categoryIds
-}: any) => {
+}: any, userEmail: string) => {
   try {
     if (!Object.values(Menu).includes(meal_type)) {
       throw new Error('INVALID_MEAL_TYPE')
@@ -56,6 +60,16 @@ const insertModifier = async ({
 
     await modificadorRepo.save(modificador)
 
+
+    const actionUser = await userRepo.findOne({ where: { email: userEmail } })
+
+    if (!actionUser) {
+      throw new Error('USER_NOT_FOUND')
+    }
+
+    //Logs
+    createLog(actionUser, 'Creo un nuevo modificador', ActionType.Create)
+
     return { message: 'Modificador created successfully' }
   } catch (error) {
     throw error instanceof Error ? error : new Error('UNKNOWN_ERROR')
@@ -87,7 +101,7 @@ const getModifierById = async (id: number) => {
   }
 }
 
-const updateModifier = async (id: number, updateData: any) => {
+const updateModifier = async (id: number, updateData: any, userEmail: string) => {
   try {
     const modificador = await modificadorRepo.findOne({
       where: { id },
@@ -105,13 +119,23 @@ const updateModifier = async (id: number, updateData: any) => {
     modificadorRepo.merge(modificador, updateData)
     await modificadorRepo.save(modificador)
 
+
+    const actionUser = await userRepo.findOne({ where: { email: userEmail } })
+
+    if (!actionUser) {
+      throw new Error('USER_NOT_FOUND')
+    }
+
+    //Logs
+    createLog(actionUser, `Actualizo el modificador con el id ${id}`, ActionType.Update)
+
     return { message: 'Modificador updated successfully' }
   } catch (error) {
     throw error instanceof Error ? error : new Error('UNKNOWN_ERROR')
   }
 }
 
-const deleteModifier = async (id: number) => {
+const deleteModifier = async (id: number, userEmail: string) => {
   try {
     const modificador = await modificadorRepo.findOne({
       where: { id },
@@ -124,6 +148,16 @@ const deleteModifier = async (id: number) => {
     }
 
     await modificadorRepo.remove(modificador)
+
+
+    const actionUser = await userRepo.findOne({ where: { email: userEmail } })
+
+    if (!actionUser) {
+      throw new Error('USER_NOT_FOUND')
+    }
+
+    //Logs
+    createLog(actionUser, `Elimino el modificador con el ID: ${id}`, ActionType.Delete)
 
     return { message: 'Modificador deleted successfully' }
   } catch (error) {

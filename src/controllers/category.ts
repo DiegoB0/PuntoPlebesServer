@@ -13,9 +13,18 @@ import {
   InsertCategoryDTO,
   UpdateCategoryDTO
 } from '../dtos/category/request.dto'
+import { RequestWithUser } from '../middlewares/sessions'
 
-const addItems = async ({ body }: Request, res: Response) => {
+const addItems = async (req: Request, res: Response) => {
   try {
+    const { body } = req
+
+    const userEmail = (req as RequestWithUser).userEmail
+    if (!userEmail) {
+      return res.status(400).json({
+        message: 'Not user associated with this operation'
+      })
+    }
     const newCategory = plainToInstance(InsertCategoryDTO, body)
 
     // Validate the data
@@ -24,7 +33,7 @@ const addItems = async ({ body }: Request, res: Response) => {
       return res.status(400).json({ errors })
     }
 
-    const createdCategory = await insertCategory(body)
+    const createdCategory = await insertCategory(body, userEmail)
     res.status(201).json(createdCategory)
   } catch (e: any) {
     if (e instanceof Error) {
@@ -82,8 +91,16 @@ const getItem = async ({ params }: Request, res: Response) => {
   }
 }
 
-const updateItems = async ({ params, body }: Request, res: Response) => {
+const updateItems = async (req: Request, res: Response) => {
   try {
+    const { params, body } = req
+
+    const userEmail = (req as RequestWithUser).userEmail
+    if (!userEmail) {
+      return res.status(400).json({
+        message: 'Not user associated with this operation'
+      })
+    }
     const updatedCategoryData = plainToInstance(UpdateCategoryDTO, body)
 
     // Validate the data
@@ -92,7 +109,7 @@ const updateItems = async ({ params, body }: Request, res: Response) => {
       return res.status(400).json({ errors })
     }
 
-    const updatedCategory = await updateCategory(Number(params.id), body)
+    const updatedCategory = await updateCategory(Number(params.id), body, userEmail)
     res.status(200).json(updatedCategory)
   } catch (err: any) {
     if (err instanceof Error) {
@@ -112,8 +129,15 @@ const updateItems = async ({ params, body }: Request, res: Response) => {
 
 const removeItems = async (req: Request, res: Response) => {
   try {
+
+    const userEmail = (req as RequestWithUser).userEmail
+    if (!userEmail) {
+      return res.status(400).json({
+        message: 'Not user associated with this operation'
+      })
+    }
     const itemId = Number(req.params.id)
-    const result = await deleteCategory(itemId)
+    const result = await deleteCategory(itemId, userEmail)
 
     if (!result)
       return res

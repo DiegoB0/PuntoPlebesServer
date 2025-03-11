@@ -2,10 +2,14 @@ import { AppDataSource } from '../config/typeorm'
 import { Category } from '../entities/Categories.entity'
 import { Repository } from 'typeorm'
 import { Menu } from '../entities/enums/Menu.enum'
+import { createLog } from './log'
+import { User } from '../entities/User.entity'
+import { ActionType } from '../entities/enums/ActionType.enum'
 
 const categoryRepo: Repository<Category> = AppDataSource.getRepository(Category)
+const userRepo: Repository<User> = AppDataSource.getRepository(User)
 
-const insertCategory = async (categoryData: Category) => {
+const insertCategory = async (categoryData: Category, userEmail: string) => {
   try {
     if (!Object.values(Menu).includes(categoryData.menu_type as Menu)) {
       throw new Error('INVALID_MENU_TYPE')
@@ -19,6 +23,16 @@ const insertCategory = async (categoryData: Category) => {
     if (!savedCategory) {
       throw new Error('NO_ITEM_FOUND')
     }
+
+
+    const actionUser = await userRepo.findOne({ where: { email: userEmail } })
+
+    if (!actionUser) {
+      throw new Error('USER_NOT_FOUND')
+    }
+
+    //Logs
+    createLog(actionUser, `Creo una nueva categoria`, ActionType.Create)
 
     return savedCategory
   } catch (error: unknown) {
@@ -76,7 +90,7 @@ const getCategory = async (id: number) => {
   }
 }
 
-const updateCategory = async (id: number, categoryData: Category) => {
+const updateCategory = async (id: number, categoryData: Category, userEmail: string) => {
   try {
     // Find the category by ID
     const category = await categoryRepo.findOne({
@@ -100,6 +114,16 @@ const updateCategory = async (id: number, categoryData: Category) => {
       message: 'Category updated successfully'
     }
 
+
+    const actionUser = await userRepo.findOne({ where: { email: userEmail } })
+
+    if (!actionUser) {
+      throw new Error('USER_NOT_FOUND')
+    }
+
+    //Logs
+    createLog(actionUser, `Actualizo la categoria con el ID: ${id}`, ActionType.Update)
+
     return responseData
   } catch (error: unknown) {
     if (error instanceof Error) {
@@ -112,7 +136,7 @@ const updateCategory = async (id: number, categoryData: Category) => {
   }
 }
 
-const deleteCategory = async (id: number) => {
+const deleteCategory = async (id: number, userEmail: string) => {
   try {
     // Find the category by ID
     const category = await categoryRepo.findOne({
@@ -125,6 +149,16 @@ const deleteCategory = async (id: number) => {
 
     // Delete the category
     await categoryRepo.delete(id)
+
+
+    const actionUser = await userRepo.findOne({ where: { email: userEmail } })
+
+    if (!actionUser) {
+      throw new Error('USER_NOT_FOUND')
+    }
+
+    //Logs
+    createLog(actionUser, `Elimino la categoria con el ID: ${id}`, ActionType.Delete)
 
     return true // Return true if deletion was successful
   } catch (error: unknown) {
