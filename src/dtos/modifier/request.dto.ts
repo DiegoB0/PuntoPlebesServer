@@ -1,7 +1,6 @@
 import {
   IsString,
   IsNotEmpty,
-  IsEnum,
   IsOptional,
   ValidateNested,
   IsArray,
@@ -9,7 +8,6 @@ import {
   IsNumber
 } from 'class-validator'
 import { Type } from 'class-transformer'
-import { Menu } from '../../entities/enums/Menu.enum'
 
 class ClaveDTO {
   @IsString()
@@ -53,9 +51,14 @@ export class UpdateModifierDTO {
   @IsString()
   description?: string
 
-  @IsOptional()
-  @IsEnum(Menu)
-  meal_type?: Menu
+  @IsArray()
+  categoryIds: []
+
+  @IsBoolean()
+  hasPrice: boolean
+
+  @IsNumber()
+  price: number
 
   @ValidateNested()
   @Type(() => ClaveDTO)
