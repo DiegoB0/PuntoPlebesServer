@@ -9,7 +9,6 @@ import {
   JoinTable
 } from 'typeorm'
 import { Clave } from './Claves.entity'
-import { Menu } from './enums/Menu.enum'
 import { Category } from './Categories.entity'
 
 @Entity('modificadores')
@@ -22,13 +21,6 @@ export class Modificador {
 
   @Column()
   description: string
-
-  @Column({
-    type: 'enum',
-    enum: Menu,
-    nullable: true
-  })
-  meal_type: string
 
   @Column()
   hasPrice: boolean

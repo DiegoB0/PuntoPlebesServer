@@ -3,7 +3,6 @@ import { In, Repository } from 'typeorm'
 import { Modificador } from '../entities/Modificadores.entity'
 import { Clave } from '../entities/Claves.entity'
 import { TipoClave } from '../entities/enums/Clave.enum'
-import { Menu } from '../entities/enums/Menu.enum'
 import { Category } from '../entities/Categories.entity'
 import { createLog } from './log'
 import { User } from '../entities/User.entity'
@@ -16,22 +15,10 @@ const categoryRepo: Repository<Category> = AppDataSource.getRepository(Category)
 const userRepo: Repository<User> = AppDataSource.getRepository(User)
 
 const insertModifier = async (
-  {
-    name,
-    description,
-    meal_type,
-    claveData,
-    hasPrice,
-    price,
-    categoryIds
-  }: any,
+  { name, description, claveData, hasPrice, price, categoryIds }: any,
   userEmail: string
 ) => {
   try {
-    if (!Object.values(Menu).includes(meal_type)) {
-      throw new Error('INVALID_MEAL_TYPE')
-    }
-
     const clave = claveRepo.create({
       palabra: claveData.palabra,
       clave: claveData.clave,
@@ -54,7 +41,6 @@ const insertModifier = async (
     const modificador = modificadorRepo.create({
       name,
       description,
-      meal_type,
       clave,
       hasPrice,
       price,
@@ -114,13 +100,6 @@ const updateModifier = async (
       relations: ['clave']
     })
     if (!modificador) throw new Error('MODIFICADOR_NOT_FOUND')
-
-    if (
-      updateData.meal_type &&
-      !Object.values(Menu).includes(updateData.meal_type)
-    ) {
-      throw new Error('INVALID_MEAL_TYPE')
-    }
 
     modificadorRepo.merge(modificador, updateData)
     await modificadorRepo.save(modificador)
