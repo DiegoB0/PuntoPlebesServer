@@ -161,9 +161,9 @@ const insertOrder = async (orderData: any, userEmail: string): Promise<any> => {
     )
 
     // Validate that the totalPayments is greater than or equal to totalPrice
-    if (totalPayments < totalPrice) {
-      throw new Error('Insufficient payment amount')
-    }
+    // if (totalPayments < totalPrice) {
+    //   throw new Error('Insufficient payment amount')
+    // }
 
     await queryRunner.manager.save(Payment, payments)
     console.log('Payments inserted successfully.')

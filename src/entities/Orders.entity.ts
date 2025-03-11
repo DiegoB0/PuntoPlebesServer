@@ -47,4 +47,7 @@ export class Order {
 
   @CreateDateColumn()
   created_at: Date
+
+  @Column({ type: 'timestamp', nullable: true })
+  delivered_at: Date
 }
