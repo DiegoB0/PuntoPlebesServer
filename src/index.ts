@@ -12,12 +12,21 @@ import fileUpload from 'express-fileupload'
 const app = express()
 
 // CORS configuration
-const corsOptions =
-  process.env.NODE_ENV && process.env.NODE_ENV === 'production'
-    ? {
-        origin: ['https://puntoplebes.online', 'https://api.puntoplebes.online']
-      }
-    : { origin: true }
+const corsOptions = {
+  origin:
+    process.env.NODE_ENV && process.env.NODE_ENV === 'production'
+      ? ['https://puntoplebes.online', 'https://api.puntoplebes.online']
+      : true,
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'x-api-key',
+    'X-Requested-With',
+    'Accept'
+  ],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  credentials: true
+}
 
 // Configuring middlewares
 app.use(cors(corsOptions))
