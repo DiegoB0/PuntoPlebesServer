@@ -25,7 +25,7 @@ const corsOptions = {
     'Accept'
   ],
   methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-  credentials: true
+  credentials: false
 }
 
 // Configuring middlewares
