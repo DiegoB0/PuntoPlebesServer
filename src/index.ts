@@ -13,10 +13,7 @@ const app = express()
 
 // CORS configuration
 const corsOptions = {
-  origin:
-    process.env.NODE_ENV && process.env.NODE_ENV === 'production'
-      ? ['https://puntoplebes.online', 'https://api.puntoplebes.online']
-      : true,
+  origin: false,
   allowedHeaders: [
     'Content-Type',
     'Authorization',
