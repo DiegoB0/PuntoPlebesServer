@@ -40,12 +40,25 @@ if (process.env.NODE_ENV === 'dev') {
 app.use(router)
 
 // Global error handler
-app.use((err: any, req: express.Request, res: express.Response) => {
-  console.error(err.stack) // Log for debugging
-  const status = err.status || 500
-  const message = err.message || 'Error desconocido del servidor.'
-  res.status(status).json({ message })
-})
+app.use(
+  (
+    err: any,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    console.error(err.stack) // Log for debugging
+    const status = err.status || 500
+    const message = err.message || 'Error desconocido del servidor.'
+
+    if (typeof res.status === 'function') {
+      res.status(status).json({ message })
+    } else {
+      console.error('res.status is not a function', res)
+      next(err)
+    }
+  }
+)
 
 // Handle invalid JSON
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
@@ -60,8 +73,10 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 })
 
 // Start Express server only after DB connection is established
-const PORT = process.env.PORT || 5000
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
+const PORT = Number(process.env.PORT) || 5000
+app.listen(PORT, '127.0.0.1', () =>
+  console.log(`Server running on port ${PORT}`)
+)
 
 // Connect to database
 AppDataSource.initialize()
