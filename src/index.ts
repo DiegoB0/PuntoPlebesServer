@@ -25,9 +25,7 @@ const corsOptions = {
     'Accept'
   ],
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], // Ensure OPTIONS is listed
-  credentials: false,
-  preflightContinue: false, // Don't let the preflight request continue to your actual route
-  optionsSuccessStatus: 204 // Return 204 for successful OPTIONS request
+  credentials: true
 }
 
 // Apply the CORS middleware globally
@@ -35,6 +33,21 @@ app.use(cors(corsOptions))
 app.options('*', cors(corsOptions))
 app.use(morgan('dev'))
 app.use(express.json())
+
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', 'https://www.puntoplebes.online') // Allow only the production frontend
+    res.header(
+      'Access-Control-Allow-Methods',
+      'GET, POST, PATCH, DELETE, OPTIONS'
+    )
+    res.header(
+      'Access-Control-Allow-Headers',
+      'Content-Type, Authorization, x-api-key, X-Requested-With, Accept'
+    )
+    next()
+  })
+}
 
 // Middleware para subir imagenes
 app.use(
