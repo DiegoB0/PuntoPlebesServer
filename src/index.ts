@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import cors from 'cors'
+// import cors from 'cors'
 import morgan from 'morgan'
 import { router } from './routes'
 import express, { Request, Response, NextFunction } from 'express'
@@ -12,7 +12,7 @@ import fileUpload from 'express-fileupload'
 const app = express()
 
 // Apply the CORS middleware globally
-app.use(cors())
+// app.use(cors())
 app.use(morgan('dev'))
 app.use(express.json())
 
