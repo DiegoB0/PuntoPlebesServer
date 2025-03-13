@@ -19,7 +19,7 @@ class OrderItemDTO {
 
   @IsOptional()
   @IsArray()
-  details?: string[]
+  details?: number[]
 }
 
 class PaymentDTO {
