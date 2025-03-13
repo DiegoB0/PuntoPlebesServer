@@ -14,7 +14,7 @@ const app = express()
 // CORS configuration
 const corsOptions =
   process.env.NODE_ENV && process.env.NODE_ENV === 'production'
-    ? { origin: ['https://puntoplebes.online', 'null'] }
+    ? { origin: ['https://puntoplebes.online'] }
     : { origin: true }
 
 // Configuring middlewares
