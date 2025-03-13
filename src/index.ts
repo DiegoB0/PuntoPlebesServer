@@ -11,40 +11,10 @@ import fileUpload from 'express-fileupload'
 // Inicializar la aplicación de Express
 const app = express()
 
-// CORS configuration
-const corsOptions = {
-  origin: false,
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'x-api-key',
-    'X-Requested-With',
-    'Accept'
-  ],
-  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], // Ensure OPTIONS is listed
-  credentials: true
-}
-
 // Apply the CORS middleware globally
-app.use(cors(corsOptions))
-app.options('*', cors(corsOptions))
+app.use(cors())
 app.use(morgan('dev'))
 app.use(express.json())
-
-if (process.env.NODE_ENV === 'production') {
-  app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'https://www.puntoplebes.online') // Allow only the production frontend
-    res.header(
-      'Access-Control-Allow-Methods',
-      'GET, POST, PATCH, DELETE, OPTIONS'
-    )
-    res.header(
-      'Access-Control-Allow-Headers',
-      'Content-Type, Authorization, x-api-key, X-Requested-With, Accept'
-    )
-    next()
-  })
-}
 
 // Middleware para subir imagenes
 app.use(
