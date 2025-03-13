@@ -1,6 +1,7 @@
 import 'reflect-metadata'
 import { DataSource } from 'typeorm'
 import dotenv from 'dotenv'
+const isProduction = process.env.NODE_ENV === 'production'
 
 dotenv.config()
 
@@ -16,5 +17,5 @@ export const AppDataSource = new DataSource({
   },
   synchronize: true,
   logging: ['error', 'schema'],
-  entities: ['src/entities/*.ts']
+  entities: isProduction ? ['dist/entities/*.js'] : ['src/entities/*.ts']
 })
