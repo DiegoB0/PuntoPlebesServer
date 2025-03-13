@@ -24,11 +24,13 @@ const corsOptions = {
     'X-Requested-With',
     'Accept'
   ],
-  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-  credentials: false
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], // Ensure OPTIONS is listed
+  credentials: false,
+  preflightContinue: false, // Don't let the preflight request continue to your actual route
+  optionsSuccessStatus: 204 // Return 204 for successful OPTIONS request
 }
 
-// Configuring middlewares
+// Apply the CORS middleware globally
 app.use(cors(corsOptions))
 app.options('*', cors(corsOptions))
 app.use(morgan('dev'))
