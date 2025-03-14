@@ -3,7 +3,7 @@ import { User } from '../entities/User.entity'
 import { verified } from '../utils/bcrypt_handler'
 import {
   generateToken,
-  generateRereshToken,
+  generateRefreshToken,
   verifyRefreshToken
 } from '../utils/jwt.handler'
 import { Repository } from 'typeorm'
@@ -39,7 +39,7 @@ const loginUser = async (loginData: LoginUserDTO) => {
       email: existingUser.email,
       role: existingUser.role
     })
-    const refreshToken = await generateRereshToken(existingUser.email)
+    const refreshToken = await generateRefreshToken(existingUser.email)
 
     const user = {
       user_email: existingUser.email,
@@ -108,8 +108,8 @@ const createApiKey = async (
   return newApiKey
 }
 
-const refreshToken = async (refreshToken: string) => {
-  const isValid = verifyRefreshToken(refreshToken)
+const refreshToken = async (refreshTokenKey: string) => {
+  const isValid = verifyRefreshToken(refreshTokenKey)
   if (!isValid) {
     throw new Error('Invalid refresh token')
   }

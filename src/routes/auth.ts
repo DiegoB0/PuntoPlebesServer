@@ -5,7 +5,6 @@ import {
   createApiKeyController
 } from '../controllers/auth'
 import { apiKeyMiddleware } from '../middlewares/apiKey'
-import { checkJwt } from '../middlewares/sessions'
 
 const router = Router()
 
@@ -109,7 +108,7 @@ router.post('/login', apiKeyMiddleware, loginController)
  *       500:
  *         description: Internal server error.
  */
-router.post('/refresh', apiKeyMiddleware, checkJwt, refreshTokenController)
+router.post('/refresh', apiKeyMiddleware, refreshTokenController)
 
 export { router }
 

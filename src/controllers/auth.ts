@@ -60,7 +60,7 @@ const refreshTokenController = async (req: any, res: any) => {
     const newAccessToken = await refreshToken(refreshTokenKey)
 
     // Return the new access token
-    res.json({ accessToken: newAccessToken })
+    res.json({ token: newAccessToken })
   } catch (error) {
     if (error instanceof Error) {
       const errorMap: Record<string, number> = {

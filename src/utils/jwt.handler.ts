@@ -5,8 +5,7 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'token02'
 
 const generateToken = async (user: { email: string; role: string }) => {
   const jwt = sign({ email: user.email, role: user.role }, JWT_SECRET, {
-    // Incluir email y role
-    expiresIn: '7d'
+    expiresIn: '2h'
   })
   return jwt
 }
@@ -24,9 +23,9 @@ const verifyToken = (jwt: string) => {
   }
 }
 
-const generateRereshToken = async (email: string) => {
+const generateRefreshToken = async (email: string) => {
   const refreshJwt = sign({ email }, JWT_REFRESH_SECRET, {
-    expiresIn: '7d'
+    expiresIn: '2d'
   })
   return refreshJwt
 }
@@ -41,4 +40,4 @@ const verifyRefreshToken = (refreshJwt: string) => {
   }
 }
 
-export { generateToken, generateRereshToken, verifyToken, verifyRefreshToken }
+export { generateToken, generateRefreshToken, verifyToken, verifyRefreshToken }
