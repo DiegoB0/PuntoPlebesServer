@@ -12,20 +12,10 @@ import fileUpload from 'express-fileupload'
 const app = express()
 
 // Apply the CORS middleware globally
-const corsOptions = {
-  origin: 'https://puntoplebes.online',
-  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'x-api-key',
-    'X-Requested-With',
-    'Accept',
-    'Access-Control-Allow-Origin'
-  ],
-  optionsSuccessStatus: 200,
-  credentials: true
-}
+const corsOptions =
+  process.env.NODE_ENV && process.env.NODE_ENV === 'production'
+    ? { origin: ['https://www.puntoplebes.online'] }
+    : { origin: true }
 
 app.use(cors(corsOptions))
 app.options('*', cors(corsOptions))
