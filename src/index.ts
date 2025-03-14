@@ -1,5 +1,5 @@
 import 'dotenv/config'
-// import cors from 'cors'
+import cors from 'cors'
 import morgan from 'morgan'
 import { router } from './routes'
 import express, { Request, Response, NextFunction } from 'express'
@@ -12,7 +12,21 @@ import fileUpload from 'express-fileupload'
 const app = express()
 
 // Apply the CORS middleware globally
-// app.use(cors())
+const corsOptions = {
+  origin: 'https://puntoplebes.online',
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'x-api-key',
+    'X-Requested-With',
+    'Accept'
+  ], // Allowed headers
+
+  credentials: true
+}
+
+app.use(cors(corsOptions))
 app.use(morgan('dev'))
 app.use(express.json())
 
