@@ -20,13 +20,15 @@ const corsOptions = {
     'Authorization',
     'x-api-key',
     'X-Requested-With',
-    'Accept'
-  ], // Allowed headers
-
+    'Accept',
+    'Access-Control-Allow-Origin'
+  ],
+  optionsSuccessStatus: 200,
   credentials: true
 }
 
 app.use(cors(corsOptions))
+app.options('*', cors(corsOptions))
 app.use(morgan('dev'))
 app.use(express.json())
 
