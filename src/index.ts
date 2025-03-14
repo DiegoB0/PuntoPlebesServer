@@ -37,6 +37,9 @@ const corsOptions: CorsOptionsDelegate = (req, callback) => {
     } else {
       callback(new Error('Forbidden'), undefined)
     }
+  } else {
+    corsConfig.origin = true
+    callback(null, corsConfig)
   }
 }
 
