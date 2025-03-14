@@ -1,5 +1,4 @@
 import 'dotenv/config'
-import cors from 'cors'
 import morgan from 'morgan'
 import { router } from './routes'
 import express, { Request, Response, NextFunction } from 'express'
@@ -7,15 +6,39 @@ import { AppDataSource } from './config/typeorm'
 import swaggerSpec from './swagger'
 import swaggerUI from 'swagger-ui-express'
 import fileUpload from 'express-fileupload'
+import cors, { CorsOptionsDelegate, CorsOptions } from 'cors'
 
 // Inicializar la aplicación de Express
 const app = express()
 
-// Apply the CORS middleware globally
-const corsOptions =
-  process.env.NODE_ENV && process.env.NODE_ENV === 'production'
-    ? { origin: 'https://www.puntoplebes.online' }
-    : { origin: true }
+const corsOptions: CorsOptionsDelegate = (req, callback) => {
+  const origin = req.headers.origin
+
+  const corsConfig: CorsOptions = {
+    origin: false,
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-api-key',
+      'X-Requested-With',
+      'Accept'
+    ],
+    credentials: true
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    if (
+      typeof origin === 'string' &&
+      origin === 'https://www.puntoplebes.online'
+    ) {
+      corsConfig.origin = true
+      callback(null, corsConfig)
+    } else {
+      callback(new Error('Forbidden'), undefined)
+    }
+  }
+}
 
 app.use(cors(corsOptions))
 app.options('*', cors(corsOptions))
