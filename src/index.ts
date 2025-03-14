@@ -14,7 +14,7 @@ const app = express()
 // Apply the CORS middleware globally
 const corsOptions =
   process.env.NODE_ENV && process.env.NODE_ENV === 'production'
-    ? { origin: ['https://www.puntoplebes.online'] }
+    ? { origin: 'https://www.puntoplebes.online' }
     : { origin: true }
 
 app.use(cors(corsOptions))
