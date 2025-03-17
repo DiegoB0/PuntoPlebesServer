@@ -16,8 +16,7 @@ import { Modificador } from '../entities/Modificadores.entity'
 
 const orderRepo: Repository<Order> = AppDataSource.getRepository(Order)
 const userRepo: Repository<User> = AppDataSource.getRepository(User)
-const modifierRepo: Repository<Modificador> =
-  AppDataSource.getRepository(Modificador)
+const modifierRepo: Repository<Modificador> = AppDataSource.getRepository(Modificador)
 
 const insertOrder = async (orderData: any, userEmail: string): Promise<any> => {
   console.log(userEmail)
@@ -81,58 +80,38 @@ const insertOrder = async (orderData: any, userEmail: string): Promise<any> => {
     const meals = await mealRepository.findBy({ id: In(itemMealIds) })
     const mealMap = new Map(meals.map((meal) => [meal.id, meal]))
 
-    orderData.items.forEach(
-      async (item: {
-        meal_id: number
-        quantity: number
-        details?: string[]
-      }) => {
-        const meal = mealMap.get(item.meal_id)
-        if (!meal) {
-          throw new Error(`Meal with ID ${item.meal_id} not found`)
-        }
-
-        // Calculate subtotal for this item (meal.price * quantity)
-        const itemSubtotal = meal.price * item.quantity
-        totalPrice += itemSubtotal
-        subtotals.push({ meal_id: item.meal_id, subtotal: itemSubtotal })
-
-        // Create the order item
-        const orderItem = new OrderItem()
-        orderItem.order = order
-        orderItem.meal = meal
-        orderItem.quantity = item.quantity
-        orderItems.push(orderItem)
-
-        if (item.details && item.details.length) {
-          const details = item.details || []
-
-          const selectedModifiers = await modifierRepo.find({
-            where: {
-              id: In(details)
-            }
-          })
-          selectedModifiers.forEach((modifier) => {
-            const orderItemDetail = new OrderItemDetail()
-            orderItemDetail.orderItem = orderItem
-            orderItemDetail.details = [modifier]
-            orderItemDetails.push(orderItemDetail)
-          })
-        }
-
-        // ==================== LAST APPROACH WITH DETAILS AS ARRAY OF STRINGS ============================
-        // Create order item details (if any)
-        // if (item.details && item.details.length > 0) {
-        //   item.details.forEach((detail: string) => {
-        //     const orderItemDetail = new OrderItemDetail()
-        //     orderItemDetail.orderItem = orderItem
-        //     orderItemDetail.details = [detail]
-        //     orderItemDetails.push(orderItemDetail)
-        //   })
-        // }
+    for (const item of orderData.items) {
+      const meal = mealMap.get(item.meal_id);
+      if (!meal) {
+        throw new Error(`Meal with ID ${item.meal_id} not found`);
       }
-    )
 
+      const itemSubtotal = meal.price * item.quantity;
+      totalPrice += itemSubtotal;
+      subtotals.push({ meal_id: item.meal_id, subtotal: itemSubtotal });
+
+      const orderItem = new OrderItem();
+      orderItem.order = order;
+      orderItem.meal = meal;
+      orderItem.quantity = item.quantity;
+      orderItems.push(orderItem);
+
+      if (item.details && item.details.length) {
+        const selectedModifiers = await modifierRepo.find({
+          where: { id: In(item.details) },
+          relations: ['clave'] // Load claves here to confirm they exist
+        });
+
+        console.log('Selected Modifiers for item', item.meal_id, ':', selectedModifiers); // Debug
+
+        for (const modifier of selectedModifiers) {
+          const orderItemDetail = new OrderItemDetail();
+          orderItemDetail.orderItem = orderItem;
+          orderItemDetail.details = [modifier];
+          orderItemDetails.push(orderItemDetail);
+        }
+      }
+    }
     order.total_price = totalPrice
 
     // Save the order and obtain the saved order (with id, created_at, etc.)
@@ -171,6 +150,39 @@ const insertOrder = async (orderData: any, userEmail: string): Promise<any> => {
     // Calculate exchange (difference between total amount given and total price)
     const exchange = totalPayments - totalPrice
 
+    // Returning the claves
+    const fetchedOrderItems = await queryRunner.manager.find(OrderItem, {
+      where: { order: { id: savedOrder.id } },
+      relations: ['meal', 'meal.clave', 'orderItemDetails', 'orderItemDetails.details', 'orderItemDetails.details.clave']
+    });
+
+    // Debug log to inspect
+    console.log('Fetched Order Items:', JSON.stringify(fetchedOrderItems, null, 2));
+
+
+    // Format claves
+    const formatOrderItemClaves = (orderItem: OrderItem): string => {
+      let parts = [String(orderItem.quantity)];
+      if (orderItem.meal.clave) {
+        parts.push(orderItem.meal.clave.clave);
+      }
+      const detail_claves = orderItem.orderItemDetails
+        .map(detail =>
+          detail.details
+            ? detail.details.map(mod => (mod.clave ? mod.clave.clave : ''))
+            : []
+        )
+        .flat()
+        .filter(clave => clave !== '');
+      parts = parts.concat(detail_claves);
+      return parts.join(' ');
+
+    };
+    // Create list of formatted claves
+    const clavesList = fetchedOrderItems.map(formatOrderItemClaves);
+
+    const claves_string = clavesList.join(', ');
+
     // Commit the transaction
     await queryRunner.commitTransaction()
     console.log('Transaction committed successfully.')
@@ -188,7 +200,8 @@ const insertOrder = async (orderData: any, userEmail: string): Promise<any> => {
       message: 'Order saved successfully',
       exchange,
       totalPrice,
-      subtotals
+      subtotals,
+      claves: claves_string,
     }
   } catch (error) {
     // Rollback on error
