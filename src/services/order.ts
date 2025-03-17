@@ -16,10 +16,11 @@ import { Modificador } from '../entities/Modificadores.entity'
 
 const orderRepo: Repository<Order> = AppDataSource.getRepository(Order)
 const userRepo: Repository<User> = AppDataSource.getRepository(User)
-const modifierRepo: Repository<Modificador> = AppDataSource.getRepository(Modificador)
+const modifierRepo: Repository<Modificador> =
+  AppDataSource.getRepository(Modificador)
 
 const insertOrder = async (orderData: any, userEmail: string): Promise<any> => {
-  console.log(userEmail)
+  const startTime = performance.now() // Debug timing
   const user = await userRepo.findOne({ where: { email: userEmail } })
 
   if (!user) {
@@ -31,30 +32,49 @@ const insertOrder = async (orderData: any, userEmail: string): Promise<any> => {
   try {
     await queryRunner.startTransaction()
 
-    // -------------------------------
-    // 1. Calculate order number based on business day (starting at 3am)
-    // -------------------------------
-    let now = moment()
-    if (now.hour() < 3) {
-      now = now.subtract(1, 'day')
-    }
-    const startOfDay = moment(now).set({
-      hour: 3,
-      minute: 0,
-      second: 0,
-      millisecond: 0
-    })
-    const endOfDay = moment(startOfDay).add(1, 'day')
+    // 1. Pre-fetch all necessary data in one go
+    const itemMealIds = [
+      ...new Set(
+        orderData.items.map((item: { meal_id: number }) => item.meal_id)
+      )
+    ] // Unique IDs
+    const modifierIds = orderData.items.flatMap(
+      (item: { details?: number[] }) => item.details || []
+    )
+    const [meals, modifiers, ordersToday] = await Promise.all([
+      queryRunner.manager.find(Meal, {
+        where: { id: In(itemMealIds) },
+        relations: ['clave']
+      }),
+      modifierIds.length
+        ? queryRunner.manager.find(Modificador, {
+            where: { id: In([...new Set(modifierIds)]) },
+            relations: ['clave']
+          })
+        : Promise.resolve([]),
+      queryRunner.manager.find(Order, {
+        where: {
+          created_at: Between(
+            (moment().hour() < 3
+              ? moment().subtract(1, 'day')
+              : moment().set({ hour: 3, minute: 0, second: 0, millisecond: 0 })
+            ).toDate(),
+            (moment().hour() < 3
+              ? moment().subtract(1, 'day').add(1, 'day')
+              : moment()
+                  .set({ hour: 3, minute: 0, second: 0, millisecond: 0 })
+                  .add(1, 'day')
+            ).toDate()
+          )
+        }
+      })
+    ])
 
-    // Query orders for the current business day using Between operator
-    const ordersToday = await queryRunner.manager.find(Order, {
-      where: { created_at: Between(startOfDay.toDate(), endOfDay.toDate()) }
-    })
+    const mealMap = new Map(meals.map((meal) => [meal.id, meal]))
+    const modifierMap = new Map(modifiers.map((mod) => [mod.id, mod]))
     const nextOrderNumber = ordersToday.length + 1
 
-    // -------------------------------
-    // 2. Insert the main order
-    // -------------------------------
+    // 2. Build entities in memory
     const order = new Order()
     order.order_number = nextOrderNumber
     order.order_status = orderData.order_status || OrderStatus.Proceso
@@ -62,71 +82,51 @@ const insertOrder = async (orderData: any, userEmail: string): Promise<any> => {
     order.client_phone = orderData.client_phone
     order.user = user
 
-    // We will calculate total_price based on items below
     let totalPrice = 0
     const subtotals: { meal_id: number; subtotal: number }[] = []
-
-    // -------------------------------
-    // 3. Process order items and details, and calculate totals
-    // -------------------------------
     const orderItems: OrderItem[] = []
     const orderItemDetails: OrderItemDetail[] = []
-    const itemMealIds = orderData.items.map(
-      (item: { meal_id: number }) => item.meal_id
-    )
-
-    const mealRepository = queryRunner.manager.getRepository(Meal)
-    // Fetch all required meals at once
-    const meals = await mealRepository.findBy({ id: In(itemMealIds) })
-    const mealMap = new Map(meals.map((meal) => [meal.id, meal]))
 
     for (const item of orderData.items) {
-      const meal = mealMap.get(item.meal_id);
+      const meal = mealMap.get(item.meal_id)
       if (!meal) {
-        throw new Error(`Meal with ID ${item.meal_id} not found`);
+        throw new Error(`Meal with ID ${item.meal_id} not found`)
       }
 
-      const itemSubtotal = meal.price * item.quantity;
-      totalPrice += itemSubtotal;
-      subtotals.push({ meal_id: item.meal_id, subtotal: itemSubtotal });
+      const itemSubtotal = meal.price * item.quantity
+      totalPrice += itemSubtotal
+      subtotals.push({ meal_id: item.meal_id, subtotal: itemSubtotal })
 
-      const orderItem = new OrderItem();
-      orderItem.order = order;
-      orderItem.meal = meal;
-      orderItem.quantity = item.quantity;
-      orderItems.push(orderItem);
+      const orderItem = new OrderItem()
+      orderItem.order = order
+      orderItem.meal = meal
+      orderItem.quantity = item.quantity
+      orderItems.push(orderItem)
 
-      if (item.details && item.details.length) {
-        const selectedModifiers = await modifierRepo.find({
-          where: { id: In(item.details) },
-          relations: ['clave'] // Load claves here to confirm they exist
-        });
-
-        console.log('Selected Modifiers for item', item.meal_id, ':', selectedModifiers); // Debug
-
-        for (const modifier of selectedModifiers) {
-          const orderItemDetail = new OrderItemDetail();
-          orderItemDetail.orderItem = orderItem;
-          orderItemDetail.details = [modifier];
-          orderItemDetails.push(orderItemDetail);
+      if (item.details?.length) {
+        for (const detailId of item.details) {
+          const modifier = modifierMap.get(detailId)
+          if (modifier) {
+            // Only if modifier exists
+            const orderItemDetail = new OrderItemDetail()
+            orderItemDetail.orderItem = orderItem
+            orderItemDetail.details = [modifier]
+            orderItemDetails.push(orderItemDetail)
+          }
         }
       }
     }
     order.total_price = totalPrice
 
-    // Save the order and obtain the saved order (with id, created_at, etc.)
+    // 3. Batch save all entities
     const savedOrder = await queryRunner.manager.save(order)
-    console.log('New order inserted with ID:', savedOrder.id)
-
-    // Update order relationship for order items and perform bulk insert
     orderItems.forEach((item) => (item.order = savedOrder))
-    await queryRunner.manager.save(OrderItem, orderItems)
-    await queryRunner.manager.save(OrderItemDetail, orderItemDetails)
-    console.log('Order items and details inserted successfully.')
+    await Promise.all([
+      queryRunner.manager.save(OrderItem, orderItems),
+      queryRunner.manager.save(OrderItemDetail, orderItemDetails)
+    ])
 
-    // -------------------------------
-    // 4. Insert payments and compute exchange
-    // -------------------------------
+    // 4. Payments
     let totalPayments = 0
     const payments = orderData.payments.map(
       (payment: { payment_method: string; amount_given: number }) => {
@@ -138,78 +138,47 @@ const insertOrder = async (orderData: any, userEmail: string): Promise<any> => {
         return newPayment
       }
     )
-
-    // Validate that the totalPayments is greater than or equal to totalPrice
-    // if (totalPayments < totalPrice) {
-    //   throw new Error('Insufficient payment amount')
-    // }
-
     await queryRunner.manager.save(Payment, payments)
-    console.log('Payments inserted successfully.')
-
-    // Calculate exchange (difference between total amount given and total price)
     const exchange = totalPayments - totalPrice
 
-    // Returning the claves
-    const fetchedOrderItems = await queryRunner.manager.find(OrderItem, {
-      where: { order: { id: savedOrder.id } },
-      relations: ['meal', 'meal.clave', 'orderItemDetails', 'orderItemDetails.details', 'orderItemDetails.details.clave']
-    });
-
-    // Debug log to inspect
-    console.log('Fetched Order Items:', JSON.stringify(fetchedOrderItems, null, 2));
-
-
-    // Format claves
+    // 5. Format claves using in-memory data (no extra fetch)
     const formatOrderItemClaves = (orderItem: OrderItem): string => {
-      let parts = [String(orderItem.quantity)];
+      let parts = [String(orderItem.quantity)]
       if (orderItem.meal.clave) {
-        parts.push(orderItem.meal.clave.clave);
+        parts.push(orderItem.meal.clave.clave)
       }
-      const detail_claves = orderItem.orderItemDetails
-        .map(detail =>
-          detail.details
-            ? detail.details.map(mod => (mod.clave ? mod.clave.clave : ''))
-            : []
+      const detail_claves = orderItemDetails
+        .filter((detail) => detail.orderItem === orderItem)
+        .flatMap((detail) =>
+          detail.details.map((mod) => mod.clave?.clave || '')
         )
-        .flat()
-        .filter(clave => clave !== '');
-      parts = parts.concat(detail_claves);
-      return parts.join(' ');
+        .filter((clave) => clave)
+      parts = parts.concat(detail_claves)
+      return parts.join(' ')
+    }
+    const clavesList = orderItems.map(formatOrderItemClaves)
+    const claves_string = clavesList.join(', ')
 
-    };
-    // Create list of formatted claves
-    const clavesList = fetchedOrderItems.map(formatOrderItemClaves);
-
-    const claves_string = clavesList.join(', ');
-
-    // Commit the transaction
+    // Commit
     await queryRunner.commitTransaction()
-    console.log('Transaction committed successfully.')
-
-    // Drop the redis cache
     redis.del('orders')
-
-    // Log for logs table
     createLog(user, 'Tomo una nueva orden', ActionType.Create)
 
-    // -------------------------------
-    // 5. Return result
-    // -------------------------------
+    const endTime = performance.now() // Debug timing
+    console.log(`Execution time: ${(endTime - startTime) / 1000} seconds`)
+
     return {
       message: 'Order saved successfully',
       exchange,
       totalPrice,
       subtotals,
-      claves: claves_string,
+      claves: claves_string
     }
   } catch (error) {
-    // Rollback on error
     await queryRunner.rollbackTransaction()
     console.error('Error inserting order, transaction rolled back:', error)
     throw error instanceof Error ? error : new Error('UNKNOWN_ERROR')
   } finally {
-    // Release query runner resources
     await queryRunner.release()
   }
 }
