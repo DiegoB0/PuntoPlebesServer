@@ -105,7 +105,25 @@ const updateModifier = async (
       where: { id },
       relations: ['clave']
     })
+
     if (!modificador) throw new Error('MODIFICADOR_NOT_FOUND')
+
+    if (updateData.categoryIds) {
+      const categories = await categoryRepo.find({
+        where: {
+          id: In(updateData.categoryIds)
+        }
+      })
+
+      if (categories.length !== updateData.categoryIds.length) {
+        throw new Error('One or more categories not found')
+      }
+
+      modificador.categories = categories // Update categories
+    }
+
+    // Merge other updates (except categories, since we handle that separately)
+    delete updateData.categoryIds
 
     modificadorRepo.merge(modificador, updateData)
     await modificadorRepo.save(modificador)
