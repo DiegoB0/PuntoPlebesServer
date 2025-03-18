@@ -25,7 +25,7 @@ export class Modificador {
   @Column()
   hasPrice: boolean
 
-  @Column()
+  @Column({ nullable: true })
   price?: number
 
   @ManyToMany(() => Category, (category) => category.modificadores)
@@ -37,7 +37,10 @@ export class Modificador {
   })
   categories: Category[]
 
-  @OneToOne(() => Clave, (clave) => clave.modificador)
+  @OneToOne(() => Clave, (clave) => clave.modificador, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
+  })
   @JoinColumn({ name: 'clave_id' })
   clave: Clave
 

@@ -19,14 +19,6 @@ const insertModifier = async (
   userEmail: string
 ) => {
   try {
-    const clave = claveRepo.create({
-      palabra: claveData.palabra,
-      clave: claveData.clave,
-      tipo_clave: TipoClave.Modificador
-    })
-
-    await claveRepo.save(clave)
-
     // Add categories
     const categories = await categoryRepo.find({
       where: {
@@ -41,12 +33,24 @@ const insertModifier = async (
     const modificador = modificadorRepo.create({
       name,
       description,
-      clave,
       hasPrice,
       price,
       categories
     })
 
+    await modificadorRepo.save(modificador)
+
+    const clave = claveRepo.create({
+      palabra: claveData.palabra,
+      clave: claveData.clave,
+      tipo_clave: TipoClave.Modificador,
+      modificador: modificador
+    })
+
+    await claveRepo.save(clave)
+    modificador.clave = clave
+
+    // Save the modifier with its clave
     await modificadorRepo.save(modificador)
 
     const actionUser = await userRepo.findOne({ where: { email: userEmail } })

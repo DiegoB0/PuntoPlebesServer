@@ -34,6 +34,7 @@ export class InsertModifierDTO {
   @IsBoolean()
   hasPrice: boolean
 
+  @IsOptional()
   @IsNumber()
   price: number
 
