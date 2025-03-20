@@ -94,27 +94,34 @@ const insertOrder = async (orderData: any, userEmail: string): Promise<any> => {
       }
 
       const itemSubtotal = meal.price * item.quantity
-      totalPrice += itemSubtotal
-      subtotals.push({ meal_id: item.meal_id, subtotal: itemSubtotal })
+      let modifiersTotal = 0
 
       const orderItem = new OrderItem()
       orderItem.order = order
       orderItem.meal = meal
       orderItem.quantity = item.quantity
-      orderItems.push(orderItem)
 
       if (item.details?.length) {
         for (const detailId of item.details) {
           const modifier = modifierMap.get(detailId)
           if (modifier) {
-            // Only if modifier exists
+            // Check if modifier has a price and add it
+            if (modifier.hasPrice && modifier.price) {
+              modifiersTotal += modifier.price * item.quantity // Multiply by quantity
+            }
+
             const orderItemDetail = new OrderItemDetail()
             orderItemDetail.orderItem = orderItem
+
             orderItemDetail.details = [modifier]
             orderItemDetails.push(orderItemDetail)
           }
         }
       }
+
+      totalPrice += itemSubtotal + modifiersTotal
+      subtotals.push({ meal_id: item.meal_id, subtotal: itemSubtotal })
+      orderItems.push(orderItem)
     }
     order.total_price = totalPrice
 
